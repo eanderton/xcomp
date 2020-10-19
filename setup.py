@@ -16,30 +16,41 @@ class ExtDevelop(develop):
 
 
 setuptools.setup(
-     name='xcomp',
-     version=__VERSION__,
-     description='XComp 6502 assembler',
-     long_description=open('README.md').read().strip(),
-     author='Eric Anderton',
-     author_email='eric.t.anderton@gmail.com',
-     url='http://github.com/eanderton/xcomp',
-     packages=['xcomp'],
-     test_suite='tests',
-     install_requires=[],
-     extras_require={
-        'develop': ['coverage'],
-     },
-     cmdclass= {
-        'develop': ExtDevelop,
-     },
-     license='MIT License',
-     zip_safe=False,
-     keywords='compiler compilers 6502 6510',
-     classifiers=[
-         'Packages'
-         'Development Status :: 4 - Beta',
-         'Intended Audience :: Developers',
-         'License :: OSI Approved :: MIT License',
-         'Programming Language :: Python :: 3',
-         'Programming Language :: Python :: 3.6',
-     ])
+    name='xcomp',
+    version=__VERSION__,
+    description='XComp 6502 assembler',
+    long_description=open('README.md').read().strip(),
+    author='Eric Anderton',
+    author_email='eric.t.anderton@gmail.com',
+    url='http://github.com/eanderton/xcomp',
+    packages=['xcomp'],
+    test_suite='tests',
+    install_requires=[
+        'pragma_utils',
+        'oxeye',
+    ],
+    extras_require={
+       'develop': [
+           'pytest',
+           'pytest-cov'
+        ],
+    },
+    cmdclass= {
+       'develop': ExtDevelop,
+    },
+    entry_points={
+        'console_scripts': [
+            'xcomp=xcomp.cli:main',
+        ],
+    },
+    license='MIT License',
+    zip_safe=False,
+    keywords='compiler compilers 6502 6510',
+    classifiers=[
+        'Packages'
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.8',
+    ])
