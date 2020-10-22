@@ -14,13 +14,9 @@ class Directive(object):
 
 @attrs(auto_attribs=True)
 class Macro(object):
-    pass
-
-
-@attrs(auto_attribs=True)
-class MacroCall(object):
-    name: str
-    arguments: List
+    name: str = None
+    params: List[str] = []
+    body: List[Any] = []
 
 
 @attrs(auto_attribs=True)
@@ -34,15 +30,7 @@ class Op(object):
 class Segment(object):
     name: str
     org: int
-    code: List[Union[Label, Op, Directive, MacroCall]] = []
-
-
-@attrs(auto_attribs=True)
-class Macro(object):
-    name: str
-    arguments: List[Any] = []
-    fragment: List[Any] = []
-
+    code: List[Any] = []
 
 #@attrs(auto_attribs=True)
 #class Program(object):
