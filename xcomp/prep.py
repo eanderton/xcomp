@@ -9,6 +9,7 @@ from oxeye.match import *
 from xcomp.model import *
 from xcomp.lexer import Tok, Lexer
 
+
 class Preprocessor(TokenParser):
     '''
     Pre-processor for a token stream that handles
@@ -35,11 +36,12 @@ class Preprocessor(TokenParser):
             arg = self._macro_args[ii]
             param = self._macro.params[ii]
             param = self._macro.get_param_id(param)
-            self._tokens_out.extend([
-                Tok.const('.const', line=0, column=0),
-                Tok.ident(param, line=0, column=0),
-                arg,
-            ])
+            self._macros[param] = Macro(param, body=[arg])
+            #self._tokens_out.extend([
+            #    Tok.const('.const', line=0, column=0),
+            #    Tok.ident(param, line=0, column=0),
+            #    arg,
+            #])
         # emit macro body and cleanup
         self._tokens_out.extend(self._macro.body)
         self._macro_args = []
@@ -81,29 +83,28 @@ class Preprocessor(TokenParser):
 
     def reset(self):
         ''' Resets the parser state. '''
-        self._tokens_out = []
         self._macros = {}
+        self.soft_reset()
+
+    def soft_reset(self):
+        ''' Resets the parser state for another pass at the token stream. '''
+        self._tokens_out = []
         self._macro = None
         self._macro_args = []
         self._has_substitutions = False
         super().reset()
 
-    # TODO; may need a soft_reset() for a multipass capable parser base
-
     def parse(self, asm_source, max_passes=10):
+        ''' Re-parse the input stream up to a set maximum numer of times. '''
         lexer = Lexer()
         lexer.parse(asm_source)
-        self._lex_tokens = lexer.tokens  # debug
-
-        # loop until there's nothing left to do
-        self._tokens_out = lexer.tokens
+        tokens = lexer.tokens
         for ii in range(max_passes):
-            self._tokens = self._tokens_out
-            self.reset()
-            print('pass:', ii+1)
-            super().parse(self._tokens)
+            self.soft_reset()
+            super().parse(tokens)
             if not self._has_substitutions:
                 break
+            tokens = self._tokens_out
 
     def generate_grammar(self):
         ''' Generates the grammar for the parser. '''

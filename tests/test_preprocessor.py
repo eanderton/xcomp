@@ -18,9 +18,6 @@ class PrepTest(OxeyeTest):
         dbg = {x:getattr(parser, x) for x in [
             '_trace', '_macros', '_macro_args',
             ]}
-        #dbg['_tokens'] = tuple(map(str, parser._tokens))
-        #dbg['_tokens_out'] = tuple(map(str, parser._tokens_out))
-        dbg['_tokens'] = tuple([x.value for x in parser._tokens])
         dbg['_tokens_out'] = tuple([x.value for x in parser._tokens_out])
         pprint(dbg, indent=1, width=40)
 
@@ -211,9 +208,6 @@ class TestPrepSubstitution(PrepTest):
         self.assertEqual(foo.params, ['addr'])
 
         self.assertLexEqual(parser._tokens_out, [
-            Token('.const', '.const'),
-            Token('ident', foo.get_param_id('addr')),
-            Token('number', 0xbabe, line=4, column=5),
             Token('ident', 'lda', line=2, column=5),
             Token('ident', foo.get_param_id('addr'), line=2, column=9),
         ])
@@ -231,9 +225,6 @@ class TestPrepSubstitution(PrepTest):
         .endmacro
         foo 0xbabe
         """))
-        foo = parser._macros.get('foo', None)
-        self.assertIsNone(foo)
-
         self.assertLexEqual(parser._tokens_out, [
             Token('ident', 'lda', line=2, column=5),
             Token('number', 0xbabe, line=4, column=5),
