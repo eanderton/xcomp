@@ -47,7 +47,7 @@ class Preprocessor(TokenParser):
         arglen = len(self._macro_args)
         paramlen = len(self._macro.params)
         if arglen != paramlen:
-            self._error(f'Expected {paramlen} arguments; got {arglen} instead')
+            self._parse_error(f'Expected {paramlen} arguments; got {arglen} instead')
 
         # emit constants for args to be used on next pass
         for ii in range(arglen):
@@ -123,6 +123,7 @@ class Preprocessor(TokenParser):
                 tokens = self._tokens_out
             else:
                 break
+        return self._tokens_out
 
     def generate_grammar(self):
         return {
@@ -138,7 +139,7 @@ class Preprocessor(TokenParser):
 
             'include_decl': (
                 (Tok.string, self._include_file, 'goal'),
-                self._error('Expected string argument to .include.'),
+                self._error('Expected string argument for .include.'),
             ),
 
             'singlet_decl': (

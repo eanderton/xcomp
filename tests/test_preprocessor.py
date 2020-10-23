@@ -305,4 +305,12 @@ class TestPreprocessorInclude(PrepTest):
             Token('number', 0x01, line=2, column=5),
         ])
 
+    @selfish('parser')
+    def test_expected_string(self, parser):
+        with self.assertRaises(ParseError,
+                msg='Expected string argument for .include.'):
+            self._set_file(cleandoc("""
+            .include foobar
+            """))
+            parser.parse('<internal>')
 
