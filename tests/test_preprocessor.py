@@ -14,6 +14,9 @@ class PrepTest(OxeyeTest):
     def _load_file(self, path):
         return self._test_files[path]
 
+    def _set_file(self, content, path='<internal>'):
+        self._test_files[path] = content
+
     def setUp(self):
         self.maxDif = None
         self.parser = Preprocessor(self._load_file)
@@ -32,10 +35,11 @@ class PrepTest(OxeyeTest):
 class TestPreprocessor(PrepTest):
     @selfish('parser')
     def test_macro_decl_empty(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo
         .endmacro
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [])
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
@@ -45,9 +49,10 @@ class TestPreprocessor(PrepTest):
 
     @selfish('parser')
     def test_const_decl(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .const foo 0x1234
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [])
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
@@ -60,11 +65,12 @@ class TestPreprocessor(PrepTest):
 
     @selfish('parser')
     def test_macro_decl_args_none(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo ()
             macro content
         .endmacro
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [])
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
@@ -77,11 +83,12 @@ class TestPreprocessor(PrepTest):
 
     @selfish('parser')
     def test_macro_decl_args_one(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo (a)
             macro content a
         .endmacro
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [])
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
@@ -95,11 +102,12 @@ class TestPreprocessor(PrepTest):
 
     @selfish('parser')
     def test_macro_decl_args_multi(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo (a, b, c)
             macro content
         .endmacro
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [])
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
@@ -113,66 +121,75 @@ class TestPreprocessor(PrepTest):
     @selfish('parser')
     def test_const_no_name(self, parser):
         with self.assertRaises(ParseError, msg='Expected const name'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .const
             """))
+            parser.parse('<internal>')
 
     @selfish('parser')
     def test_const_no_value(self, parser):
         with self.assertRaises(ParseError, msg='Expected const value'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .const foo
             """))
+            parser.parse('<internal>')
 
     @selfish('parser')
     def test_macro_no_name(self, parser):
         with self.assertRaises(ParseError, msg='Expected macro name'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .macro
             """))
+            parser.parse('<internal>')
 
     @selfish('parser')
     def test_macro_param_no_end(self, parser):
         with self.assertRaises(ParseError,
                 msg='Expected closing ")" in macro parameter list.'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .macro foo (
             """))
+            parser.parse('<internal>')
         parser.reset()
         with self.assertRaises(ParseError,
                 msg='Expected closing ")" in macro parameter list.'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .macro foo (a
             """))
+            parser.parse('<internal>')
         parser.reset()
         with self.assertRaises(ParseError,
                 msg='Expected closing ")" in macro parameter list.'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .macro foo (a,
             """))
+            parser.parse('<internal>')
 
     @selfish('parser')
     def test_macro_no_body(self, parser):
         with self.assertRaises(ParseError, msg='Expected ".endmacro"'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .macro foo
             """))
+            parser.parse('<internal>')
 
         parser.reset()
         with self.assertRaises(ParseError, msg='Expected ".endmacro"'):
-            parser.parse(cleandoc("""
+            self._set_file(cleandoc("""
             .macro foo xxx
             """))
+            parser.parse('<internal>')
 
 class TestPrepSubstitution(PrepTest):
 
     @selfish('parser')
     def test_macro_decl_empty(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo
         .endmacro
         foo
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [])
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
@@ -182,12 +199,13 @@ class TestPrepSubstitution(PrepTest):
 
     @selfish('parser')
     def test_macro_decl_content(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo
             lda 0x4001
         .endmacro
         foo
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [
             Token('ident', 'lda', line=2, column=5),
             Token('number', 0x4001, line=2, column=9),
@@ -203,12 +221,13 @@ class TestPrepSubstitution(PrepTest):
 
     @selfish('parser')
     def test_macro_args_one_pass(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo (addr)
             lda addr
         .endmacro
         foo 0xbabe
-        """), max_passes=1)
+        """))
+        parser.parse('<internal>', max_passes=1)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
         self.assertFalse(foo.is_singlet())
@@ -229,12 +248,13 @@ class TestPrepSubstitution(PrepTest):
 
     @selfish('parser')
     def test_macro_args(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo (addr)
             lda addr
         .endmacro
         foo 0xbabe
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [
             Token('ident', 'lda', line=2, column=5),
             Token('number', 0xbabe, line=4, column=5),
@@ -242,12 +262,13 @@ class TestPrepSubstitution(PrepTest):
 
     @selfish('parser')
     def test_macro_args_multi(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
         .macro foo (a, b, c, d)
             op d, c, b, a
         .endmacro
         foo 0x01, 0x02, 0x03, 0x04
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [
             Token('ident', 'op', line=2, column=5),
             Token('number', 0x04, line=4, column=23),
@@ -260,22 +281,19 @@ class TestPrepSubstitution(PrepTest):
         ])
 
 class TestPreprocessorInclude(PrepTest):
-    def setUp(self):
-        self._test_files = {
-            'macro-lib.inc': cleandoc("""
-            .macro foo (a, b, c, d)
-                op d, c, b, a
-            .endmacro
-            """),
-        }
-        super().setUp()
-
     @selfish('parser')
     def test_include_file(self, parser):
-        parser.parse(cleandoc("""
+        self._set_file(cleandoc("""
+        .macro foo (a, b, c, d)
+            op d, c, b, a
+        .endmacro
+        """), 'macro-lib.inc')
+
+        self._set_file(cleandoc("""
         .include "macro-lib.inc"
         foo 0x01, 0x02, 0x03, 0x04
         """))
+        parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [
             Token('ident', 'op', line=2, column=5, source='macro-lib.inc'),
             Token('number', 0x04, line=2, column=23),

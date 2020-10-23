@@ -112,11 +112,10 @@ class Preprocessor(TokenParser):
         self._needs_another_pass = False
         super().reset()
 
-    def parse(self, asm_source, max_passes=10):
+    def parse(self, filename, max_passes=10):
         ''' Re-parse the input stream up to a set maximum numer of times. '''
         lexer = Lexer()
-        lexer.parse(asm_source)
-        tokens = lexer.tokens
+        tokens = lexer.parse(self.file_loader_fn(filename), source=filename)
         for ii in range(max_passes):
             self.soft_reset()
             super().parse(tokens)
