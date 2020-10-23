@@ -18,12 +18,7 @@ class TestLexer(OxeyeTest):
         ; comment one
         ; comment two
         """))
-        expected = [
-            Token('comment', 'comment one', 1, 1),
-            Token('comment', 'comment two',  2, 1),
-        ]
-        print('tok 0:', lexer._tokens[0].value)
-        print('tok 1:', lexer._tokens[1].value)
+        expected = []
         self.assertLexEqual(lexer._tokens, expected)
 
     @selfish('lexer')

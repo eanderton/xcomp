@@ -51,7 +51,7 @@ class Lexer(TokenLexer):
 
                 (match_rex(r'(\$|0x)([0-9a-fA-F]{2,4})'), self._hex_value, 'goal'),
                 (match_rex(r'"((?:\\.|[^"\\])*)"'), Tok.string, 'goal'),
-                (match_rex(r';\s*(.*)(?=\n|$)'), Tok.comment, 'goal'),
+                (match_rex(r';\s*(.*)(?=\n|$)'), self._newline, 'goal'),
                 (match_rex(r'([_a-zA-Z][_a-zA-Z0-9]*)'), Tok.ident, 'goal'),
                 (match_rex(r'(\d+(?:\.\d+)?)'), self._float_value, 'goal'),
 

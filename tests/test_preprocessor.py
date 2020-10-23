@@ -16,8 +16,7 @@ class PrepTest(OxeyeTest):
     def tearDown(self, parser):
         print('trace:')
         dbg = {x:getattr(parser, x) for x in [
-            '_trace', '_macros', '_const',
-            '_macro_name', '_macro_args', '_macro_body',
+            '_trace', '_macros', '_macro_args',
             ]}
         #dbg['_tokens'] = tuple(map(str, parser._tokens))
         #dbg['_tokens_out'] = tuple(map(str, parser._tokens_out))
@@ -34,9 +33,9 @@ class TestPreprocessor(PrepTest):
         .endmacro
         """))
         self.assertLexEqual(parser._tokens_out, [])
-        self.assertTrue('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertTrue(foo.is_const())
         self.assertEqual(foo.params, [])
         self.assertEqual(foo.body, [])
 
@@ -46,9 +45,9 @@ class TestPreprocessor(PrepTest):
         .const foo 0x1234
         """))
         self.assertLexEqual(parser._tokens_out, [])
-        self.assertTrue('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertTrue(foo.is_const())
         self.assertEqual(foo.params, [])
         self.assertLexEqual(foo.body, [
             Token('number', 0x1234, line=1, column=12),
@@ -63,9 +62,9 @@ class TestPreprocessor(PrepTest):
         .endmacro
         """))
         self.assertLexEqual(parser._tokens_out, [])
-        self.assertTrue('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertTrue(foo.is_const())
         self.assertEqual(foo.params, [])
         self.assertEqual(foo.body, [
             Token('ident', 'macro', line=2, column=5),
@@ -80,32 +79,31 @@ class TestPreprocessor(PrepTest):
         .endmacro
         """))
         self.assertLexEqual(parser._tokens_out, [])
-        self.assertFalse('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertFalse(foo.is_const())
         self.assertEqual(foo.params, ['a'])
         self.assertLexEqual(foo.body, [
             Token('ident', 'macro', line=2, column=5),
             Token('ident', 'content', line=2, column=11),
-            Token('ident', 'a', line=2, column=19),
+            Token('ident', foo.get_param_id('a'), line=2, column=19),
         ])
 
     @selfish('parser')
     def test_macro_decl_args_multi(self, parser):
         parser.parse(cleandoc("""
         .macro foo (a, b, c)
-            macro content a
+            macro content
         .endmacro
         """))
         self.assertLexEqual(parser._tokens_out, [])
-        self.assertFalse('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertFalse(foo.is_const())
         self.assertEqual(foo.params, ['a', 'b', 'c'])
         self.assertEqual(foo.body, [
             Token('ident', 'macro', line=2, column=5),
             Token('ident', 'content', line=2, column=11),
-            Token('ident', 'a', line=2, column=19),
         ])
 
     @selfish('parser')
@@ -172,9 +170,9 @@ class TestPrepSubstitution(PrepTest):
         foo
         """))
         self.assertLexEqual(parser._tokens_out, [])
-        self.assertTrue('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertTrue(foo.is_const())
         self.assertEqual(foo.params, [])
         self.assertEqual(foo.body, [])
 
@@ -184,17 +182,61 @@ class TestPrepSubstitution(PrepTest):
         .macro foo
             lda 0x4001
         .endmacro
-        ;foo
+        foo
         """))
         self.assertLexEqual(parser._tokens_out, [
             Token('ident', 'lda', line=2, column=5),
             Token('number', 0x4001, line=2, column=9),
         ])
-        self.assertTrue('foo' in parser._const)
         foo = parser._macros.get('foo', None)
         self.assertIsNotNone(foo)
+        self.assertTrue(foo.is_const())
         self.assertEqual(foo.params, [])
         self.assertLexEqual(foo.body, [
             Token('ident', 'lda', line=2, column=5),
             Token('number', 0x4001, line=2, column=9),
         ])
+
+    @selfish('parser')
+    def test_macro_args_one_pass(self, parser):
+        parser.parse(cleandoc("""
+        .macro foo (addr)
+            lda addr
+        .endmacro
+        foo 0xbabe
+        """), max_passes=1)
+        foo = parser._macros.get('foo', None)
+        self.assertIsNotNone(foo)
+        self.assertFalse(foo.is_const())
+        self.assertEqual(foo.params, ['addr'])
+
+        self.assertLexEqual(parser._tokens_out, [
+            Token('.const', '.const'),
+            Token('ident', foo.get_param_id('addr')),
+            Token('number', 0xbabe, line=4, column=5),
+            Token('ident', 'lda', line=2, column=5),
+            Token('ident', foo.get_param_id('addr'), line=2, column=9),
+        ])
+
+        self.assertLexEqual(foo.body, [
+            Token('ident', 'lda', line=2, column=5),
+            Token('ident', foo.get_param_id('addr'), line=2, column=9),
+        ])
+
+    @selfish('parser')
+    def test_macro_args(self, parser):
+        parser.parse(cleandoc("""
+        .macro foo (addr)
+            lda addr
+        .endmacro
+        foo 0xbabe
+        """))
+        foo = parser._macros.get('foo', None)
+        self.assertIsNone(foo)
+
+        self.assertLexEqual(parser._tokens_out, [
+            Token('ident', 'lda', line=2, column=5),
+            Token('number', 0xbabe, line=4, column=5),
+        ])
+
+    # TODO: need formatter/emitter for token streams to ease analysis and testing
