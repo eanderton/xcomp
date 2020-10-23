@@ -2,6 +2,14 @@ from attr import attrib, attrs, Factory
 from typing import *
 
 
+# TODO: flesh this out with search paths
+class FileLoader(object):
+    def __call__(self, path):
+        with open(path) as f:
+            return f.read()
+
+
+@attrs(auto_attribs=True)
 class Label(object):
     addr: int = 0
     resolved: bool = False
@@ -18,10 +26,12 @@ class Macro(object):
     params: List[str] = Factory(list)
     body: List[Any] = Factory(list)
 
-    def is_const(self):
+    def is_singlet(self):
         return len(self.params) == 0
 
     def get_param_id(self, name):
+        if isinstance(name, int):
+            name = self.params[name]
         return f'@{id(self)}_{name}'
 
 

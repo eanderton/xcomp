@@ -14,69 +14,87 @@ class Preprocessor(TokenParser):
     '''
     Pre-processor for a token stream that handles
     '''
+    def __init__(self, file_loader_fn):
+        self.file_loader_fn = file_loader_fn
+        super().__init__()
+
+    def _include_file(self, tok):
+        ''' Inserts a tokenized file into the output stream '''
+        filename = tok.value
+        lexer = Lexer()
+        lexer.parse(self.file_loader_fn(filename), source=filename)
+        self._tokens_out.extend(lexer.tokens)
+        self._needs_another_pass = True
 
     def _start_macro_decl(self, tok):
-        print('start decl', tok.value)
+        ''' Creates a new macro object for the token name provided. '''
         name = tok.value
         self._macro = Macro(name)
         self._macros[name] = self._macro
 
     def _end_macro_decl(self, _=None):
+        ''' Clears the current macro state. '''
         self._macro = None
 
     def _start_macro_call(self, tok):
-        print('macro call', tok.value, self.pos)
+        ''' Generates a new macro for the identifier token specified. '''
         name = tok.value
         self._macro = self._macros[name]
 
     def _end_macro_call(self, _=None):
-        print('end macro call', self.pos)
-        # emit constants for args
-        for ii in range(len(self._macro_args)):
+        ''' Substitutes the current macro into the output token stream. '''
+        # validate arguments are satisfied
+        arglen = len(self._macro_args)
+        paramlen = len(self._macro.params)
+        if arglen != paramlen:
+            self._error(f'Expected {paramlen} arguments; got {arglen} instead')
+
+        # emit constants for args to be used on next pass
+        for ii in range(arglen):
             arg = self._macro_args[ii]
-            param = self._macro.params[ii]
-            param = self._macro.get_param_id(param)
-            self._macros[param] = Macro(param, body=[arg])
-            #self._tokens_out.extend([
-            #    Tok.const('.const', line=0, column=0),
-            #    Tok.ident(param, line=0, column=0),
-            #    arg,
-            #])
-        # emit macro body and cleanup
+            param = self._macro.get_param_id(ii)
+            self._tokens_out.extend([
+                Tok.const('.const', line=0, column=0),
+                Tok.ident(param, line=0, column=0),
+                arg,
+            ])
+
+        # emit macro body, cleanup, and flag for one more pass
         self._tokens_out.extend(self._macro.body)
         self._macro_args = []
-        self._has_substitutions = len(self._macro.params) > 0
+        self._needs_another_pass = len(self._macro.params) > 0
 
-    def _insert_const(self, tok):
-        print('insert const', tok.value, tuple(map(str, self._tokens_out)))
+    def _insert_singlet(self, tok):
+        ''' Inserts singlet into the output token stream '''
         macro = self._macros[tok.value]
         self._tokens_out.extend(macro.body)
 
     def _add_macro_arg(self, tok):
+        print('add_macro_arg', str(tok))
         self._macro_args.append(tok)
 
     def _add_macro_param(self, tok):
         self._macro.params.append(tok.value)
 
     def _add_macro_body(self, tok):
+        ''' Adds a token to the current macro body, substituting references to parameters. '''
         if tok.value in self._macro.params:
             param_id = self._macro.get_param_id(tok.value)
-            macro_token = tok(
-                    param_id, tok.line, tok.column, tok.source)
+            macro_token = tok(param_id, tok.line, tok.column, tok.source)
         else:
             macro_token = tok
         self._macro.body.append(macro_token)
 
-    def _set_const_body(self, tok):
+    def _set_singlet_body(self, tok):
         self._macro.body.append(tok)
         self._end_macro_decl()
 
     def _add_token(self, tok):
         self._tokens_out.append(tok)
 
-    def _is_const(self, tok):
+    def _is_singlet(self, tok):
         macro = self._macros.get(tok.value, None)
-        return macro and macro.is_const()
+        return macro and macro.is_singlet()
 
     def _is_macro(self, tok):
         return tok.value in self._macros
@@ -91,7 +109,7 @@ class Preprocessor(TokenParser):
         self._tokens_out = []
         self._macro = None
         self._macro_args = []
-        self._has_substitutions = False
+        self._needs_another_pass = False
         super().reset()
 
     def parse(self, asm_source, max_passes=10):
@@ -102,28 +120,34 @@ class Preprocessor(TokenParser):
         for ii in range(max_passes):
             self.soft_reset()
             super().parse(tokens)
-            if not self._has_substitutions:
+            if self._needs_another_pass:
+                tokens = self._tokens_out
+            else:
                 break
-            tokens = self._tokens_out
 
     def generate_grammar(self):
-        ''' Generates the grammar for the parser. '''
         return {
             'goal': (
+                (Tok.include, nop, 'include_decl'),
                 (Tok.macro, nop, 'macro_decl'),
-                (Tok.const, nop,'const_decl'),
-                (match_fn(self._is_const), self._insert_const, 'goal'),
+                (Tok.const, nop,'singlet_decl'),
+                (match_fn(self._is_singlet), self._insert_singlet, 'goal'),
                 (match_fn(self._is_macro), self._start_macro_call, 'macro_arg'),
                 (match_any, self._add_token, 'goal'),
                 rule_end,
             ),
 
-            'const_decl': (
-                (Tok.ident, self._start_macro_decl, 'const_body'),
+            'include_decl': (
+                (Tok.string, self._include_file, 'goal'),
+                self._error('Expected string argument to .include.'),
+            ),
+
+            'singlet_decl': (
+                (Tok.ident, self._start_macro_decl, 'singlet_body'),
                 self._error('Expected const name'),
             ),
-            'const_body': (
-                (match_any, self._set_const_body, 'goal'),
+            'singlet_body': (
+                (match_any, self._set_singlet_body, 'goal'),
                 self._error('Expected const value'),
             ),
 

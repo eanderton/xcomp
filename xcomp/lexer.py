@@ -16,7 +16,7 @@ class Tok(object):
 
 # set elements in namespace
 for x in ['ident', 'number', 'string', 'comment', 'segment',
-        '.const', '.macro', '.endmacro',
+        '.include', '.const', '.macro', '.endmacro',
         '.byte', '.word']:
     setattr(Tok, x[1:] if x.startswith('.') else x, Token(x))
 
@@ -45,6 +45,7 @@ class Lexer(TokenLexer):
                 (match_seq('.text'), Tok.segment, 'goal'),
                 (match_seq('.data'), Tok.segment, 'goal'),
                 (match_seq('.bss'), Tok.segment, 'goal'),
+                (match_seq('.include'), Tok.include, 'goal'),
                 (match_seq('.const'), Tok.const, 'goal'),
                 (match_seq('.macro'), Tok.macro, 'goal'),
                 (match_seq('.endmacro'), Tok.endmacro, 'goal'),
