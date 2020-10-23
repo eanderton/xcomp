@@ -280,6 +280,17 @@ class TestPrepSubstitution(PrepTest):
             Token('number', 0x01, line=4, column=5),
         ])
 
+    @selfish('parser')
+    def test_too_many_args(self, parser):
+        with self.assertRaises(ParseError,
+                msg='Expected string argument for .include.'):
+            self._set_file(cleandoc("""
+            .macro foo (a)
+            .endmacro
+            foo one two
+            """))
+            parser.parse('<internal>')
+
 class TestPreprocessorInclude(PrepTest):
     @selfish('parser')
     def test_include_file(self, parser):
