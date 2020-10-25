@@ -66,7 +66,7 @@ class TestPreprocessor(PrepTest):
     @selfish('parser')
     def test_macro_decl_args_none(self, parser):
         self._set_file(cleandoc("""
-        .macro foo ()
+        .macro foo
             macro content
         .endmacro
         """))
@@ -84,7 +84,7 @@ class TestPreprocessor(PrepTest):
     @selfish('parser')
     def test_macro_decl_args_one(self, parser):
         self._set_file(cleandoc("""
-        .macro foo (a)
+        .macro foo, a
             macro content a
         .endmacro
         """))
@@ -103,7 +103,7 @@ class TestPreprocessor(PrepTest):
     @selfish('parser')
     def test_macro_decl_args_multi(self, parser):
         self._set_file(cleandoc("""
-        .macro foo (a, b, c)
+        .macro foo, a, b, c
             macro content
         .endmacro
         """))
@@ -144,24 +144,11 @@ class TestPreprocessor(PrepTest):
 
     @selfish('parser')
     def test_macro_param_no_end(self, parser):
-        with self.assertRaises(ParseError,
-                msg='Expected closing ")" in macro parameter list.'):
-            self._set_file(cleandoc("""
-            .macro foo (
-            """))
-            parser.parse('<internal>')
         parser.reset()
         with self.assertRaises(ParseError,
-                msg='Expected closing ")" in macro parameter list.'):
+                msg='Expected macro parameter name'):
             self._set_file(cleandoc("""
-            .macro foo (a
-            """))
-            parser.parse('<internal>')
-        parser.reset()
-        with self.assertRaises(ParseError,
-                msg='Expected closing ")" in macro parameter list.'):
-            self._set_file(cleandoc("""
-            .macro foo (a,
+            .macro foo,
             """))
             parser.parse('<internal>')
 
@@ -222,7 +209,7 @@ class TestPrepSubstitution(PrepTest):
     @selfish('parser')
     def test_macro_args_one_pass(self, parser):
         self._set_file(cleandoc("""
-        .macro foo (addr)
+        .macro foo, addr
             lda addr
         .endmacro
         foo 0xbabe
@@ -249,7 +236,7 @@ class TestPrepSubstitution(PrepTest):
     @selfish('parser')
     def test_macro_args(self, parser):
         self._set_file(cleandoc("""
-        .macro foo (addr)
+        .macro foo, addr
             lda addr
         .endmacro
         foo 0xbabe
@@ -263,7 +250,7 @@ class TestPrepSubstitution(PrepTest):
     @selfish('parser')
     def test_macro_args_multi(self, parser):
         self._set_file(cleandoc("""
-        .macro foo (a, b, c, d)
+        .macro foo, a, b, c, d
             op d, c, b, a
         .endmacro
         foo 0x01, 0x02, 0x03, 0x04
@@ -286,7 +273,7 @@ class TestPrepSubstitution(PrepTest):
         with self.assertRaises(ParseError,
                 msg='Expected 1 arguments; got 3 instead'):
             self._set_file(cleandoc("""
-            .macro foo (a)
+            .macro foo, a
             .endmacro
             foo one,two
             """))
@@ -297,7 +284,7 @@ class TestPrepSubstitution(PrepTest):
         with self.assertRaises(ParseError,
                 msg='Expected 3 arguments; got 1 instead'):
             self._set_file(cleandoc("""
-            .macro foo (a,b,c)
+            .macro foo, a,b,c
             .endmacro
             foo one
             """))
@@ -307,7 +294,7 @@ class TestPreprocessorInclude(PrepTest):
     @selfish('parser')
     def test_include_file(self, parser):
         self._set_file(cleandoc("""
-        .macro foo (a, b, c, d)
+        .macro foo, a, b, c, d
             op d, c, b, a
         .endmacro
         """), 'macro-lib.inc')

@@ -126,8 +126,6 @@ class Preprocessor(TokenParser):
             super().parse(tokens)
         return self._tokens_out
 
-    # TODO: get rid of parens for macro decl - make it a comma-list with the
-    # name as the first arg
     def generate_grammar(self):
         return {
             'goal': (
@@ -155,23 +153,16 @@ class Preprocessor(TokenParser):
             ),
 
             'macro_decl': (
-                (Tok.ident, self._start_macro_decl, 'macro_param_start'),
+                (Tok.ident, self._start_macro_decl, 'macro_param_next'),
                 self._error('Expected macro name'),
-            ),
-            'macro_param_start': (
-                ('(', nop, 'macro_param'),
-                (match_peek, nop, 'macro_body'),
-                self._error('Expected ".endmacro"'),
             ),
             'macro_param': (
                 (Tok.ident, self._add_macro_param, 'macro_param_next'),
-                (')', nop, 'macro_body'),
-                self._error('Expected closing ")" in macro parameter list.')
+                self._error('Expected macro parameter name')
             ),
             'macro_param_next': (
                 (',', nop, 'macro_param'),
-                (')', nop, 'macro_body'),
-                self._error('Expected closing ")" in macro parameter list.')
+                (match_peek, nop, 'macro_body'),
             ),
             'macro_body': (
                 (Tok.endmacro, self._end_macro_decl, 'goal'),
@@ -181,7 +172,7 @@ class Preprocessor(TokenParser):
 
             'macro_arg': (
                 (match_any, self._add_macro_arg, 'macro_arg_next'),
-                self._error('Expected one or more arguments for macro.'),
+                self._error('Expected one or more arguments for macro'),
             ),
             'macro_arg_next': (
                 (',', nop, 'macro_arg'),
