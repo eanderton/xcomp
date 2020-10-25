@@ -12,7 +12,7 @@ from xcomp.lexer import Tok, Lexer
 
 class Preprocessor(TokenParser):
     '''
-    Pre-processor for a token stream that handles
+    Pre-processor for a token stream that handles macros and inclusions.
     '''
     def __init__(self, file_loader_fn):
         self.file_loader_fn = file_loader_fn
@@ -115,16 +115,19 @@ class Preprocessor(TokenParser):
     def parse(self, filename, max_passes=10):
         ''' Re-parse the input stream up to a set maximum numer of times. '''
         lexer = Lexer()
-        tokens = lexer.parse(self.file_loader_fn(filename), source=filename)
+        self._tokens_out = lexer.parse(self.file_loader_fn(filename), source=filename)
+        self._needs_another_pass = True
         for ii in range(max_passes):
-            self.soft_reset()
-            super().parse(tokens)
             if self._needs_another_pass:
                 tokens = self._tokens_out
             else:
                 break
+            self.soft_reset()
+            super().parse(tokens)
         return self._tokens_out
 
+    # TODO: get rid of parens for macro decl - make it a comma-list with the
+    # name as the first arg
     def generate_grammar(self):
         return {
             'goal': (

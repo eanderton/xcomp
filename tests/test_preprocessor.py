@@ -207,7 +207,7 @@ class TestPrepSubstitution(PrepTest):
         """))
         parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [
-            Token('ident', 'lda', line=2, column=5),
+            Token('op', 'lda', line=2, column=5),
             Token('number', 0x4001, line=2, column=9),
         ])
         foo = parser._macros.get('foo', None)
@@ -215,7 +215,7 @@ class TestPrepSubstitution(PrepTest):
         self.assertTrue(foo.is_singlet())
         self.assertEqual(foo.params, [])
         self.assertLexEqual(foo.body, [
-            Token('ident', 'lda', line=2, column=5),
+            Token('op', 'lda', line=2, column=5),
             Token('number', 0x4001, line=2, column=9),
         ])
 
@@ -237,12 +237,12 @@ class TestPrepSubstitution(PrepTest):
             Token('.const', '.const'),
             Token('ident', foo.get_param_id('addr')),
             Token('number', 0xbabe, line=4, column=5),
-            Token('ident', 'lda', line=2, column=5),
+            Token('op', 'lda', line=2, column=5),
             Token('ident', foo.get_param_id('addr'), line=2, column=9),
         ])
 
         self.assertLexEqual(foo.body, [
-            Token('ident', 'lda', line=2, column=5),
+            Token('op', 'lda', line=2, column=5),
             Token('ident', foo.get_param_id('addr'), line=2, column=9),
         ])
 
@@ -256,7 +256,7 @@ class TestPrepSubstitution(PrepTest):
         """))
         parser.parse('<internal>')
         self.assertLexEqual(parser._tokens_out, [
-            Token('ident', 'lda', line=2, column=5),
+            Token('op', 'lda', line=2, column=5),
             Token('number', 0xbabe, line=4, column=5),
         ])
 
@@ -280,14 +280,26 @@ class TestPrepSubstitution(PrepTest):
             Token('number', 0x01, line=4, column=5),
         ])
 
+    # TODO: assertRaises is not validating msg
     @selfish('parser')
     def test_too_many_args(self, parser):
         with self.assertRaises(ParseError,
-                msg='Expected string argument for .include.'):
+                msg='Expected 1 arguments; got 3 instead'):
             self._set_file(cleandoc("""
             .macro foo (a)
             .endmacro
-            foo one two
+            foo one,two
+            """))
+            parser.parse('<internal>')
+
+    @selfish('parser')
+    def test_too_few_args(self, parser):
+        with self.assertRaises(ParseError,
+                msg='Expected 3 arguments; got 1 instead'):
+            self._set_file(cleandoc("""
+            .macro foo (a,b,c)
+            .endmacro
+            foo one
             """))
             parser.parse('<internal>')
 

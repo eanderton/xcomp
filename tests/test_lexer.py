@@ -23,10 +23,10 @@ class TestLexer(OxeyeTest):
 
     @selfish('lexer')
     def test_lex_number(self, lexer):
-        lexer.parse(' 10 22.56')
+        lexer.parse(' 100 2256')
         expected = [
-            Token('number', 10.0,  1, 2),
-            Token('number', 22.56,  1, 5),
+            Token('number', 100,  1, 2),
+            Token('number', 2256,  1, 6),
         ]
         self.assertLexEqual(lexer._tokens, expected)
 
@@ -53,6 +53,7 @@ class TestLexer(OxeyeTest):
         .macro
         .endmacro
         .const
+        .include
         """))
         expected = [
             Token('.byte', '.byte', 1, 1),
@@ -64,6 +65,7 @@ class TestLexer(OxeyeTest):
             Token('.macro', '.macro', 7, 1),
             Token('.endmacro', '.endmacro', 8, 1),
             Token('.const', '.const', 9, 1),
+            Token('.include', '.include', 10, 1),
         ]
         self.assertLexEqual(lexer._tokens, expected)
 
