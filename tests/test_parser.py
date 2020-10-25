@@ -4,7 +4,7 @@ from pragma_utils import selfish
 from oxeye.exception import ParseError
 from oxeye.testing import *
 from xcomp.prep import Preprocessor
-from xcomp.parser import Parser
+from xcomp.parser import Parser6502
 from xcomp.lexer import Tok
 from pprint import pprint
 
@@ -22,7 +22,7 @@ class ParserTest(OxeyeTest):
     def setUp(self):
         self.maxDif = None
         self.pre = Preprocessor(self._load_file)
-        self.parser = Parser()
+        self.parser = Parser6502()
         super().setUp()
 
     def _parse(self, text, path='<internal>'):

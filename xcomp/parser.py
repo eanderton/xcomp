@@ -8,8 +8,9 @@ from oxeye.rule import rule_end
 from oxeye.match import *
 from xcomp.model import *
 from xcomp.lexer import Tok, Lexer
+from xcomp.cpu6502 import *
 
-class Parser(TokenParser):
+class Parser6502(TokenParser):
     def _do_segment(self, name: Token):
         ''' Sets the current segment based on the token name. '''
         self._segment = self.segments[name.value]
