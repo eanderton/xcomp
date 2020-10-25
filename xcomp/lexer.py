@@ -110,7 +110,7 @@ class Lexer(TokenLexer):
                 (match_rex(r'([_a-zA-Z][_a-zA-Z0-9]*)'), Tok.ident, 'goal'),
                 (match_rex(r'(\d+)'), self._int_value, 'goal'),
 
-                (match_set('()-+*/^|,'), self._token, 'goal'),
+                (match_set('()-+*/^|,#<>:'), self._token, 'goal'),
                 (match_set(' \r\t\v'), self._next, 'goal'),
                 (match_seq('\n'), self._newline, 'goal'),
 
@@ -143,12 +143,12 @@ class TokenPrinter(TokenParser):
     def reset(self):
         self._output = []
         self._line = []
-        self._indent = 0
+        self._indent = 1
         super().reset()
 
     def _append(self, value):
         if not self._line:
-            self._line.append(' ' * self._indent)
+            self._line.append(' ' * (self._indent * self._indent_amount))
         self._line.append(value)
 
     def _end(self):
@@ -177,7 +177,7 @@ class TokenPrinter(TokenParser):
     def _sep(self, tok):
         ''' Emit a token with trailing whitespace (separator). '''
         self._token(tok)
-        self._line.append(' ')
+        self._append(' ')
 
     def _start(self, tok):
         ''' End line and start a new line. '''
@@ -189,15 +189,24 @@ class TokenPrinter(TokenParser):
         self._start(tok)
         self._end()
 
-    def _indent_start(self, tok):
-        ''' Starts an indented section. '''
-        self._start(tok)
-        self._indent += self._indent_amount
+    def _label(self, tokens):
+        self._end()
+        self._indent = 0
+        self._append(tokens[0].value + ':')
+        self._indent = 1
+        self._end()
 
-    def _indent_end(self, tok):
+    def _macro_start(self, tok):
+        ''' Starts an indented section. '''
+        self._indent = 0
+        self._start(tok)
+        self._indent = 2
+
+    def _macro_end(self, tok):
         ''' Ends an indented section. '''
-        self._indent -= self._indent_amount
+        self._indent = 0
         self._single(tok)
+        self._indent = 1
 
     def parse(self, tokens):
         ''' Transform a token stream into a series of text lines. '''
@@ -209,14 +218,15 @@ class TokenPrinter(TokenParser):
     def generate_grammar(self):
         return {
             'goal': (
+                (match_seq([Tok.ident, ':']), self._label, 'goal'),
                 (Tok.segment, self._single, 'goal'),
                 (Tok.byte, self._start, 'goal'),
                 (Tok.word, self._start, 'goal'),
                 (Tok.op, self._start, 'goal'),
                 (Tok.include, self._start, 'goal'),
                 (Tok.const, self._start, 'goal'),
-                (Tok.macro, self._indent_start, 'goal'),
-                (Tok.endmacro, self._indent_end, 'goal'),
+                (Tok.macro, self._macro_start, 'goal'),
+                (Tok.endmacro, self._macro_end, 'goal'),
                 (Tok.number, self._number, 'goal'),
                 (',', self._sep, 'goal'),
                 (match_any, self._token, 'goal'),
