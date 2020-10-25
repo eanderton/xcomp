@@ -8,10 +8,7 @@ from oxeye.token import Token, TokenLexer, TokenParser
 from oxeye.pred import nop
 from oxeye.rule import rule_fail, rule_end
 from oxeye.match import *
-
-# TODO: build a real opcode table
-mock_opcodes = ['lda', 'pha', 'pla', 'adc']
-
+from xcomp.cpu6502 import *
 
 class ExtToken(Token):
     def __init__(self, *args, **kwargs):
@@ -36,6 +33,8 @@ class Tok(object):
     byte = ExtToken('.byte')
     word = ExtToken('.word')
 
+
+# LUT for escape sequences used by the tokenizer
 escape_chars = {
     't': '\t',
     'r': '\r',
@@ -43,6 +42,7 @@ escape_chars = {
     'v': '\v',
     '\\': '\\',
 }
+
 
 class Lexer(TokenLexer):
     '''
@@ -76,8 +76,7 @@ class Lexer(TokenLexer):
             tok.meta['width'] = 8
         tok.meta['hex'] = False
 
-    def _string_append(self, value, lut_value=None):
-        value = lut_value or value
+    def _string_append(self, value):
         self._string.append(value)
 
     def _string_end(self, _):
@@ -89,7 +88,7 @@ class Lexer(TokenLexer):
    #TODO: attach end-line comments to previous token as metadata
 
     def generate_grammar(self):
-        opcode_rules = tuple([(match_seq(x), Tok.op, 'goal') for x in mock_opcodes])
+        opcode_rules = tuple([(match_seq(x), Tok.op, 'goal') for x in opcode_xref.keys()])
         return {
             'goal': opcode_rules + (
                 (match_seq('.byte'), Tok.byte, 'goal'),
@@ -104,30 +103,31 @@ class Lexer(TokenLexer):
                 (match_seq('.endmacro'), Tok.endmacro, 'goal'),
                 (match_seq('"'), nop, 'string_char'),
 
-                (match_rex(r'(\$|0x)([0-9a-fA-F]{3,4})'), self._hex_value16, 'goal'),
-                (match_rex(r'(\$|0x)([0-9a-fA-F]{1,2})'), self._hex_value8, 'goal'),
-                (match_rex(r';\s*(.*)(?=\n|$)'), self._newline, 'goal'),
+                (match_rex(r'(\$|0x)([0-9a-fA-F]{3,4})'), '_hex_value16', 'goal'),
+                (match_rex(r'(\$|0x)([0-9a-fA-F]{1,2})'), '_hex_value8', 'goal'),
+                (match_rex(r';\s*(.*)(?=\n|$)'), '_newline', 'goal'),
                 (match_rex(r'([_a-zA-Z][_a-zA-Z0-9]*)'), Tok.ident, 'goal'),
-                (match_rex(r'(\d+)'), self._int_value, 'goal'),
+                (match_rex(r'(\d+)'), '_int_value', 'goal'),
 
-                (match_set('()-+*/^|,#<>:'), self._token, 'goal'),
-                (match_set(' \r\t\v'), self._next, 'goal'),
-                (match_seq('\n'), self._newline, 'goal'),
+                (match_set('()-+*/^|,#<>:'), '_token', 'goal'),
+                (match_set(' \r\t\v'), '_next', 'goal'),
+                (match_seq('\n'), '_newline', 'goal'),
 
                 rule_end,
                 self._error('Unexpected token'),
             ),
             'string_char': (
-                (match_seq('"'), self._string_end, 'goal'),
+                (match_seq('"'), '_string_end', 'goal'),
                 (match_seq('\\'), nop, 'escape_char'),
-                (match_any, self._string_append, 'string_char'),
+                (match_any, '_string_append', 'string_char'),
                 self._error('Expected closing " for string'),
             ),
             'escape_char': (
-                (match_lut(escape_chars), self._string_append, 'string_char'),
+                (match_lut(escape_chars), '_string_append', 'string_char'),
                 self._error('Unknown string escape squence'),
             ),
         }
+
 
 class TokenPrinter(TokenParser):
     '''
@@ -218,18 +218,18 @@ class TokenPrinter(TokenParser):
     def generate_grammar(self):
         return {
             'goal': (
-                (match_seq([Tok.ident, ':']), self._label, 'goal'),
-                (Tok.segment, self._single, 'goal'),
-                (Tok.byte, self._start, 'goal'),
-                (Tok.word, self._start, 'goal'),
-                (Tok.op, self._start, 'goal'),
-                (Tok.include, self._start, 'goal'),
-                (Tok.const, self._start, 'goal'),
-                (Tok.macro, self._macro_start, 'goal'),
-                (Tok.endmacro, self._macro_end, 'goal'),
-                (Tok.number, self._number, 'goal'),
-                (',', self._sep, 'goal'),
-                (match_any, self._token, 'goal'),
+                (match_seq([Tok.ident, ':']), '_label', 'goal'),
+                (Tok.segment, '_single', 'goal'),
+                (Tok.byte, '_start', 'goal'),
+                (Tok.word, '_start', 'goal'),
+                (Tok.op, '_start', 'goal'),
+                (Tok.include, '_start', 'goal'),
+                (Tok.const, '_start', 'goal'),
+                (Tok.macro, '_macro_start', 'goal'),
+                (Tok.endmacro, '_macro_end', 'goal'),
+                (Tok.number, '_number', 'goal'),
+                (',', '_sep', 'goal'),
+                (match_any, '_token', 'goal'),
                 rule_end,
                 self._error('Unexpected token'),
             ),
