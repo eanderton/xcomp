@@ -93,6 +93,14 @@ class TestLexer(OxeyeTest):
         self.assertLexEqual(lexer.tokens, expected)
 
     @selfish('lexer')
+    def test_lex_string_escape(self, lexer):
+        lexer.parse(r'"hello world \r\n"')
+        expected = [
+            Token('string', 'hello world \r\n', 1, 1)
+        ]
+        self.assertLexEqual(lexer.tokens, expected)
+
+    @selfish('lexer')
     def test_lex_macro_decl(self, lexer):
         lexer.parse(cleandoc("""
         .macro foo
