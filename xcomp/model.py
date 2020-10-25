@@ -1,6 +1,6 @@
 from attr import attrib, attrs, Factory
 from typing import *
-
+from enum import Enum, auto
 
 # TODO: flesh this out with search paths
 class FileLoader(object):
@@ -34,10 +34,30 @@ class Macro(object):
             name = self.params[name]
         return f'@{id(self)}_{name}'
 
+class AddressMode(Enum):
+    accumulator = auto()  # implied?
+    absolute = auto()
+    absolute_x = auto()
+    absolute_y = auto()
+    immediate = auto()
+    implied = auto()
+    indirect = auto()
+    indirect_x = auto()
+    indirect_y = auto()
+    relative = auto()
+    zeropage = auto()
+    zeropage_x = auto()
+    zeropage_y = auto()
+
+@attrs(auto_attribs=True)
+class OpCode(object):
+    name: str
+    mode: AddressMode
+    value: int
 
 @attrs(auto_attribs=True)
 class Op(object):
-    operator: str
+    op: OpCode
     arg1: Any = None
     arg2: Any = None
 
@@ -47,9 +67,3 @@ class Segment(object):
     name: str
     org: int
     code: List[Any] = Factory(list)
-
-#@attrs(auto_attribs=True)
-#class Program(object):
-#    segments: dict[string, Segment]
-#    name_table: dict[string, Union[Label, Macro]]
-

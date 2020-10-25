@@ -2,54 +2,59 @@ import unittest
 from inspect import cleandoc
 from pragma_utils import selfish
 from oxeye.exception import ParseError
+from oxeye.testing import *
+from xcomp.prep import Preprocessor
 from xcomp.parser import Parser
+from xcomp.lexer import Tok
 from pprint import pprint
 
-from xcomp.lexer import Tok
+class ParserTest(OxeyeTest):
+    def __init__(self, *args, **kwargs):
+        self._test_files = {}
+        super().__init__(*args, **kwargs)
 
-class TestParser(unittest.TestCase):
-    def print_tokens(self, tokens):
-        print(tuple([f'{x.name}: {x.value}' for x in tokens]))
+    def _load_file(self, path):
+        return self._test_files[path]
+
+    def _set_file(self, content, path='<internal>'):
+        self._test_files[path] = content
 
     def setUp(self):
-        self.maxDiff = None
+        self.maxDif = None
+        self.pre = Preprocessor(self._load_file)
         self.parser = Parser()
         super().setUp()
 
+    def _parse(self, text, path='<internal>'):
+        self._set_file(text, path)
+        tokens = self.pre.parse(path)
+        print('Tokens:', tokens)
+        self.parser.parse(tokens)
+
     @selfish('parser')
     def tearDown(self, parser):
-        print(parser.head, parser._trace)
+        dbg = {x:getattr(parser, x) for x in [
+            'segments',
+            ]}
+        dbg['_trace'] = parser._trace
+        pprint(dbg, indent=1, width=40)
 
-    @selfish('parser')
-    def test_reset(self, parser):
-        parser.reset()
-        for x in ['.zero', '.text', '.data', '.bss']:
-            self.assertEqual(parser.segments[x], parser.name_table[x])
-        self.assertEqual(parser._segment, parser.segments['.text'])
 
+
+class TestParserBasic(ParserTest):
     @selfish('parser')
     def test_empty(self, parser):
-        parser.parse(cleandoc("""
-        """))
+        self._parse("""
+        """)
+        # TODO: figure out valid tests
 
     @selfish('parser')
     def test_segments(self, parser):
-        parser.parse(cleandoc("""
+        self._parse("""
         .zero
         .text
         .data
         .bss
-        """))
-
-    @selfish('parser')
-    def test_macro_def(self, parser):
-        with self.assertRaises(ParseError, msg='(1, 1) Expected macro name'):
-            parser.parse(".macro")
-
-        parser.reset()
-        parser.parse(cleandoc("""
-        .macro foo()
-        .endmacro
-        """))
-
+        """)
+        # TODO: figure out valid tests
 
