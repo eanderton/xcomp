@@ -1,3 +1,4 @@
+from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
 from enum import Enum, auto
@@ -10,9 +11,66 @@ class FileLoader(object):
 
 
 @attrs(auto_attribs=True)
+class Position(object):
+    line: int
+    column: int
+    source: str
+
+    @classmethod
+    def create(cls, other):
+        return cls(other.line, other.column, other.source)
+
+
+@attrs(auto_attribs=True)
 class Label(object):
+    pos: Position
     addr: int = 0
     resolved: bool = False
+
+
+class ExprContext(ABC):
+    @abstractmethod
+    def resolve_name(self, label_name):
+        pass
+
+
+@attrs(auto_attribs=True)
+class ExprBinaryOp(object):
+    pos: Position
+    oper: Callable
+    left: Any = None
+    right: Any = None
+
+    def eval(self, ctx):
+        return oper(left.eval(ctx), right.eval(ctx))
+
+
+@attrs(auto_attribs=True)
+class ExprUnaryOp(object):
+    pos: Position
+    oper: Callable
+    arg: Any = None
+
+    def eval(self, ctx):
+        return oper(arg.eval(ctx))
+
+
+@attrs(auto_attribs=True)
+class ExprValue(object):
+    pos: Position
+    value: int
+
+    def eval(self, ctx):
+        return value
+
+
+@attrs(auto_attribs=True)
+class ExprName(object):
+    pos: Position
+    value: str
+
+    def eval(self, ctx):
+        return ctx.resolve_name(self.value)
 
 
 @attrs(auto_attribs=True)
@@ -34,6 +92,7 @@ class Macro(object):
             name = self.params[name]
         return f'@{id(self)}_{name}'
 
+
 class AddressMode(Enum):
     accumulator = auto()  # implied?
     absolute = auto()
@@ -48,6 +107,8 @@ class AddressMode(Enum):
     zeropage = auto()
     zeropage_x = auto()
     zeropage_y = auto()
+    pseduo_number = auto()
+    unknown = auto()
 
 @attrs(auto_attribs=True)
 class OpCode(object):
@@ -57,10 +118,10 @@ class OpCode(object):
 
 @attrs(auto_attribs=True)
 class Op(object):
+    pos: Position
     op: OpCode
-    arg1: Any = None
-    arg2: Any = None
-
+    mode: AddressMode = AddressMode.unknown
+    arg: Any = None
 
 @attrs(auto_attribs=True)
 class Segment(object):

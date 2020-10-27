@@ -109,7 +109,7 @@ class Lexer(TokenLexer):
                 (match_rex(r'([_a-zA-Z][_a-zA-Z0-9]*)'), Tok.ident, 'goal'),
                 (match_rex(r'(\d+)'), '_int_value', 'goal'),
 
-                (match_set('()-+*/^|,#<>:'), '_token', 'goal'),
+                (match_set('()-+*/^|&,#<>:'), '_token', 'goal'),
                 (match_set(' \r\t\v'), '_next', 'goal'),
                 (match_seq('\n'), '_newline', 'goal'),
 
