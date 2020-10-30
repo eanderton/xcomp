@@ -65,19 +65,19 @@ class Parser6502(TokenParser):
     def generate_grammar(self):
         ''' Generates the grammar for the parser. '''
         unary_ops = {
-            '-': lambda x: -x
-            '>': lambda x: (x & 0xFF00) >> 8
-            '<': lambda x: x & 0xFF
-            '^': lambda x: x ^ 0xFFFF  # TODO; needs to consider width
+            '-': lambda x: -x,
+            '>': lambda x: ((x & 0xFF00) >> 8),
+            '<': lambda x: x & 0xFF,
+            '^': lambda x: x ^ 0xFFFF,  # TODO; needs to consider width
         }
 
         binary_ops = {
-            '/': lambda a,b: a / b
-            '*': lambda a,b: a * b
-            '-': lambda a,b: a - b
-            '+': lambda a,b: a + b
-            '|': lambda a,b: a | b
-            '&': lambda a,b: a & b
+            '/': lambda a,b: a / b,
+            '*': lambda a,b: a * b,
+            '-': lambda a,b: a - b,
+            '+': lambda a,b: a + b,
+            '|': lambda a,b: a | b,
+            '&': lambda a,b: a & b,
         }
 
         def expr_parse(parent_state):
@@ -108,33 +108,5 @@ class Parser6502(TokenParser):
                 (match_lut(opcode_xref), '_start_op', 'op'),
                 rule_end,
                 self._error('unexpected token'),
-            ),
-           '__op': (
-                ('a', '_do_op_accumulator', 'goal'),
-
-                (Tok.number, '_do_op_number', 'goal'),  # relative, zeropage, and absolute modes
-                (Tok.ident, '_do_op_absolute', 'goal'),
-
-                (match_seq([Tok.number, ',', 'x']), '_do_op_x', 'goal'),  # absolute and zeropage
-                (match_seq([Tok.ident, ',', 'x']), '_do_op_x', 'goal'),  # absolute and zeropage
-
-                (match_seq([Tok.number, ',', 'y']), '_do_op_y', 'goal'),  # absolute and zeropage
-                (match_seq([Tok.ident, ',', 'y']), '_do_op_y', 'goal'), # absolute and zeropage
-
-                (match_seq(['#', Tok.number]), '_do_op_immediate', 'goal'),
-
-                (match_seq(['(', Tok.number, ')']), '_do_op_indirect', 'goal'),
-                (match_seq(['(', Tok.identr, ')']), '_do_op_indirect', 'goal'),
-
-                (match_seq(['(', Tok.number, ',', 'x', ')']), '_do_op_indirect_x', 'goal'),
-                (match_seq(['(', Tok.identr, ',', 'x', ')']), '_do_op_indirect_x', 'goal'),
-
-                (match_seq(['(', Tok.number, ')', ',', 'y']), '_do_op_indirect_y', 'goal'),
-                (match_seq(['(', Tok.identr, ')', ',', 'y']), '_do_op_indirect_y', 'goal'),
-
-                (match_seq(['#', Tok.number]), '_do_op_immediate', 'goal'),
-                (match_seq(['(', Tok.
-
-                (peek, 'do_op_implied', 'goal'),
             ),
         }

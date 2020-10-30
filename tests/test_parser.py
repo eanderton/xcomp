@@ -8,7 +8,7 @@ from xcomp.parser import Parser6502
 from xcomp.lexer import Tok
 from pprint import pprint
 
-class ParserTest(OxeyeTest):
+class __ParserTest(OxeyeTest):
     def __init__(self, *args, **kwargs):
         self._test_files = {}
         super().__init__(*args, **kwargs)
@@ -41,7 +41,7 @@ class ParserTest(OxeyeTest):
 
 
 
-class TestParserBasic(ParserTest):
+class __TestParserBasic(__ParserTest):
     @selfish('parser')
     def test_empty(self, parser):
         self._parse("""

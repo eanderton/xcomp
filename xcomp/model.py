@@ -2,13 +2,13 @@ from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
 from enum import Enum, auto
+from parsimonious.nodes import Node
 
 # TODO: flesh this out with search paths
 class FileLoader(object):
     def __call__(self, path):
         with open(path) as f:
             return f.read()
-
 
 @attrs(auto_attribs=True)
 class Position(object):
@@ -19,6 +19,12 @@ class Position(object):
     @classmethod
     def create(cls, other):
         return cls(other.line, other.column, other.source)
+
+
+@attrs(auto_attribs=True)
+class String(object):
+    node: Node
+    value: str
 
 
 @attrs(auto_attribs=True)
@@ -57,12 +63,11 @@ class ExprUnaryOp(object):
 
 @attrs(auto_attribs=True)
 class ExprValue(object):
-    pos: Position
+    node: Node
     value: int
 
     def eval(self, ctx):
-        return value
-
+        return self.value
 
 @attrs(auto_attribs=True)
 class ExprName(object):
@@ -71,11 +76,6 @@ class ExprName(object):
 
     def eval(self, ctx):
         return ctx.resolve_name(self.value)
-
-
-@attrs(auto_attribs=True)
-class Directive(object):
-    pass
 
 
 @attrs(auto_attribs=True)
@@ -123,8 +123,22 @@ class Op(object):
     mode: AddressMode = AddressMode.unknown
     arg: Any = None
 
+
+@attrs(auto_attribs=True)
+class Storage(object):
+    node: Node
+    width: int
+    items: List[int]
+
+
 @attrs(auto_attribs=True)
 class Segment(object):
     name: str
     org: int
     code: List[Any] = Factory(list)
+
+@attrs(auto_attribs=True)
+class Program(object):
+    segments: Dict[str, Segment] = Factory(dict)
+    macros: Dict[str, Macro] = Factory(dict)
+    defs: Dict[str, Macro] = Factory(dict)
