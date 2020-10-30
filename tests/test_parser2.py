@@ -1,4 +1,6 @@
 import unittest
+from parsimonious.grammar import Grammar
+from parsimonious.nodes import Node
 from xcomp.parser2 import *
 from xcomp.model import *
 from pragma_utils import selfish
@@ -14,6 +16,22 @@ class TestExprContext(ExprContext):
         return self.names[label_name]
 
 
+class ParserUtilsTest(unittest.TestCase):
+    def setUp(self):
+        self.parser = Grammar(xcomp_grammar)
+
+    def parse(self, text, rule):
+        return self.parser[rule].parse(text)
+
+    def test_query(self):
+        result = self.parse(r'"hello\nworld"', 'string')
+        text = ''
+        q = tuple(query(result, 'stringchar', 'escapechar'))
+        for k,v in q:
+            text += v.text
+        self.assertEqual(r"hello\nworld", text)
+
+
 class ParserTest(unittest.TestCase):
     def setUp(self):
         self.parser = Parser()
@@ -25,7 +43,7 @@ class ParserTest(unittest.TestCase):
 
 class StorageTest(ParserTest):
     def test_parse_byte(self):
-        result = self.parse(".byte 01",'byte')
+        result = self.parse(".byte 01",'storage')
         self.assertEqual(result.width, 8)
         self.assertEqual([x.eval(self.ctx) for x in result.items],
                 [1])
@@ -40,38 +58,31 @@ class StorageTest(ParserTest):
 
 
 class StringTest(ParserTest):
-    @selfish('parser')
-    def test_parse_stringchar(self, parser):
-        result = parser.parse('F','stringchar')
-        self.assertEqual(result, "F")
+    def test_parse_escapechar(self):
+        result = self.parse(r'"\n"', 'string')
+        self.assertEqual(result.value, "\n")
+        with self.assertRaisesRegex(ParseException, r"Invalid escape sequence '\\x'"):
+            self.parse(r'"\x"', 'string')
 
-    @selfish('parser')
-    def test_parse_escapechar(self, parser):
-        result = parser.parse('\\n', 'escapechar')
-        self.assertEqual(result, "\n")
-        with self.assertRaisesRegex(ParseException, "Invalid escape sequence 'x'"):
-            parser.parse('\\x', 'escapechar')
-
-    @selfish('parser')
-    def test_parse_string(self, parser):
-        result = parser.parse('"foobar"', 'string')
+    def test_parse_string(self):
+        result = self.parse('"foobar"', 'string')
         self.assertEqual(result.value, 'foobar')
 
 
 class NumberTest(ParserTest):
     @selfish('parser')
     def test_parse_base2(self, parser):
-        result = parser.parse('%101010', 'base2')
+        result = parser.parse('%101010', 'number')
         self.assertEqual(result.value, 0b101010)
 
     @selfish('parser')
     def test_parse_base16(self, parser):
-        result = parser.parse('0xcafe', 'base16')
+        result = parser.parse('0xcafe', 'number')
         self.assertEqual(result.value, 0xcafe)
 
     @selfish('parser')
     def test_parse_base10(self, parser):
-        result = parser.parse('12345', 'base10')
+        result = parser.parse('12345', 'number')
         self.assertEqual(result.value, 12345)
 
     @selfish('parser')

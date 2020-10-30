@@ -60,9 +60,41 @@ any             = ~r"."
 ws              = ~r"\s*"
 """
 
-def query(ctx, productions):
-    if isinstance(ctx, Node)
-    nodefor x in node.children):
+
+def query(ctx, *productions):
+    if isinstance(ctx, list):
+        for x in ctx:
+            for y in query(x, *productions):
+                yield y
+    elif isinstance(ctx, Node):
+        for x in ctx.children:
+            for y in query(x, *productions):
+                yield y
+        for p in productions:
+            if isinstance(p, str) and ctx.expr_name == p:
+                yield (p, ctx)
+            elif isinstance(p, type) and isinstance(ctx, p):
+                yield (p, ctx)
+    else:
+        for p in productions:
+            if isinstance(p, type) and isinstance(ctx, p):
+                yield (p, ctx)
+
+
+def dbg(ctx, indent=0):
+    pre = ' '*indent
+    if isinstance(ctx, list) or isinstance(ctx, tuple):
+        print(pre, '[', len(ctx))
+        for x in ctx:
+            dbg(x, indent+2)
+        print(pre, ']')
+    elif isinstance(ctx, Node):
+        print(pre, 'Node:', ctx.expr_name, ctx.text, '[')
+        for x in ctx.children:
+            dbg(x, indent+2)
+        print(pre, ']')
+    else:
+        print(pre, ctx)
 
 
 class ParseException(Exception):
@@ -70,15 +102,6 @@ class ParseException(Exception):
         self.node = node
         super().__init__(*args, **kwargs)
 
-def promote(value):
-    if isinstance(value, Iterable):
-        return
-    return [value]
-
-def filter_none(fn):
-    def impl(self, node, children):
-        return fn(self, node, [x for x in children if x is not None])
-    return impl
 
 class Cleaner(NodeVisitor):
     unwrapped_exceptions = (ParseException, )
@@ -96,41 +119,31 @@ class Cleaner(NodeVisitor):
     def visit_storage(self, node, children):
         return children[0]
 
-    @filter_none
     def visit_byte(self, node, children):
-        _, first, values = children
-        items = [first]
-        for x in values:
-            items.append(x[0])
-        return Storage(node, 8, items)
+        return Storage(node, 8, tuple([v for k,v in query(children, ExprValue)]))
 
-    @filter_none
     def visit_word(self, node, children):
-        first = children[1]
-        values = children[2]
-        return Storage(node, 16, [first] + values)
+        return Storage(node, 16, tuple([v for k,v in query(children, ExprValue)]))
 
     ### STRING ###
 
-    def visit_escapechar(self, node, children):
-        _, ch = children
-        value = {
-            'r': '\r',
-            'n': '\n',
-            't': '\t',
-            'v': '\v',
-            '"': '"',
-        }.get(ch.text, None)
-        if value == None:
-            raise ParseException(node, f"Invalid escape sequence '{ch.text}'")
-        return value
-
-    def visit_stringchar(self, node, children):
-        return node.text
-
     def visit_string(self, node, children):
-        _, chars, _ = children  # discard delimiters
-        return String(node, ''.join(chars))
+        text = ''
+        for k,v in query(node, 'stringchar', 'escapechar'):
+            if k == 'escapechar':
+                value = {
+                    r'\r': '\r',
+                    r'\n': '\n',
+                    r'\t': '\t',
+                    r'\v': '\v',
+                    r'\"': '"',
+                }.get(v.text, None)
+                if value == None:
+                    raise ParseException(node, f"Invalid escape sequence '{v.text}'")
+                text += value
+            else:
+                text += v.text
+        return String(node, text)
 
     ### NUMBER ###
 
@@ -150,31 +163,11 @@ class Cleaner(NodeVisitor):
 
     ### MISC ###
 
-    def visit_comma(self, *args):
-        return None
-
-    def visit_ws(self, *args):
-        return None
-
     def generic_visit(self, node, visited_children):
-        ''' filters falsey children out of tree and eliminates useless nodes. '''
-
-        children = [x for x in visited_children if x]
-        if isinstance(node.expr, OneOf):
-            return children[0]
-        elif isinstance(node.expr, ZeroOrMore):
-            return children
-        elif isinstance(node.expr, OneOrMore):
-            return children
-        elif isinstance(node.expr, OptionalExpr):
-            return children[0] if children else None
-        elif isinstance(node.expr, SequenceExpr):
-            return children
-        else:
-            print(f'generic: {type(node.expr)} - {node.expr.name} - {type(node.expr)}')
-
-        node.children = children
+        if node.children != visited_children:
+            return Node(node.expr, node.full_text, node.start, node.end, visited_children)
         return node
+
 
 class Preprocessor(NodeVisitor):
     def __init__(self):

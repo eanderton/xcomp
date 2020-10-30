@@ -34,6 +34,12 @@ class Label(object):
     resolved: bool = False
 
 
+class Expr(ABC):
+    @abstractmethod
+    def eval(self, ctx):
+        pass
+
+
 class ExprContext(ABC):
     @abstractmethod
     def resolve_name(self, label_name):
@@ -41,7 +47,7 @@ class ExprContext(ABC):
 
 
 @attrs(auto_attribs=True)
-class ExprBinaryOp(object):
+class ExprBinaryOp(Expr):
     pos: Position
     oper: Callable
     left: Any = None
@@ -52,7 +58,7 @@ class ExprBinaryOp(object):
 
 
 @attrs(auto_attribs=True)
-class ExprUnaryOp(object):
+class ExprUnaryOp(Expr):
     pos: Position
     oper: Callable
     arg: Any = None
@@ -62,7 +68,7 @@ class ExprUnaryOp(object):
 
 
 @attrs(auto_attribs=True)
-class ExprValue(object):
+class ExprValue(Expr):
     node: Node
     value: int
 
@@ -70,7 +76,7 @@ class ExprValue(object):
         return self.value
 
 @attrs(auto_attribs=True)
-class ExprName(object):
+class ExprName(Expr):
     pos: Position
     value: str
 
