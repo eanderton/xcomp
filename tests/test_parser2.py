@@ -27,7 +27,7 @@ class ParserUtilsTest(unittest.TestCase):
         result = self.parse(r'"hello\nworld"', 'string')
         text = ''
         q = tuple(query(result, 'stringchar', 'escapechar'))
-        for k,v in q:
+        for v in q:
             text += v.text
         self.assertEqual(r"hello\nworld", text)
 
@@ -41,9 +41,35 @@ class ParserTest(unittest.TestCase):
         return self.parser.parse(*args, **kwargs)
 
 
+class SegmentTest(ParserTest):
+    def test_segment(self):
+        result = self.parse('.text', 'segment')
+        self.assertEqual(result.name, 'text')
+        self.assertEqual(result.start, None)
+
+    def test_segment_start(self):
+        result = self.parse('.data 0x1234', 'segment')
+        self.assertEqual(result.name, 'data')
+        self.assertEqual(result.start.value, 0x1234)
+
+
+class IncludeTest(ParserTest):
+    def test_include(self):
+        result = self.parse('.include "foobar.asm"', 'include')
+        self.assertEqual(result.filename.value, 'foobar.asm')
+
+
+class DefTest(ParserTest):
+    def test_def(self):
+        result = self.parse('.def foo bar')
+        self.assertEqual(result.name, 'foo')
+        self.assertEqual(result.body[0].value, 'bar')
+
+
+
 class StorageTest(ParserTest):
     def test_parse_byte(self):
-        result = self.parse(".byte 01",'storage')
+        result = self.parse('.byte 01','storage')
         self.assertEqual(result.width, 8)
         self.assertEqual([x.eval(self.ctx) for x in result.items],
                 [1])
@@ -51,10 +77,8 @@ class StorageTest(ParserTest):
     def test_parse_byte_many(self):
         result = self.parse(".byte 01, 02, 03",'byte')
         self.assertEqual(result.width, 8)
-        print('ITEMS', result.items)
         self.assertEqual([x.eval(self.ctx) for x in result.items],
                 [1, 2, 3])
-
 
 
 class StringTest(ParserTest):

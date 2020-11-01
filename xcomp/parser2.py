@@ -17,11 +17,13 @@ storage         = byte / word
 byte            = ".byte" ws expr ws (comma ws expr ws)*
 word            = ".word" ws expr ws (comma ws expr ws)*
 
-segment         = (".zero" / ".text" / ".data" / ".bss") number?
+segment         = segment_name ws number?
+segment_name    = ".zero" / ".text" / ".data" / ".bss"
 
-include         = ".include" string
+include         = ".include" ws string
 
 def             = ".def" ws ident ws expr
+
 macro           = ".macro" ws macro_params? ws macro_body? ws ".endmacro"
 macro_params    = ident ws (comma ws macro_params)?
 macro_body      = core_syntax*
@@ -29,7 +31,7 @@ macro_body      = core_syntax*
 oper            = ident ws oper_args?
 oper_args       = expr
 
-expr            = (ident / number)
+expr            = ident / number
 
 string          = "\"" (escapechar / stringchar)* "\""
 stringchar      = ~r'[^\"]'
@@ -67,18 +69,28 @@ def query(ctx, *productions):
             for y in query(x, *productions):
                 yield y
     elif isinstance(ctx, Node):
-        for x in ctx.children:
-            for y in query(x, *productions):
-                yield y
         for p in productions:
             if isinstance(p, str) and ctx.expr_name == p:
-                yield (p, ctx)
+                yield ctx
             elif isinstance(p, type) and isinstance(ctx, p):
-                yield (p, ctx)
+                print('Q', p, type(ctx))
+                yield ctx
+            elif hasattr(ctx, 'children'):
+                for x in ctx.children:
+                    for y in query(x, *productions):
+                        yield y
     else:
         for p in productions:
             if isinstance(p, type) and isinstance(ctx, p):
-                yield (p, ctx)
+                print('Q', p, type(ctx))
+                yield ctx
+
+
+def query_one(ctx, *productions):
+    result = tuple(query(ctx, *productions))
+    if len(result) == 1:
+        return result[0]
+    return None
 
 
 def dbg(ctx, indent=0):
@@ -115,28 +127,47 @@ class Cleaner(NodeVisitor):
     def visit_comment(self, *args):
         return None
 
+    def visit_segment(self, node, children):
+        name = query_one(children, 'segment_name')
+        start = query_one(children, ExprValue)
+        print(name, start)
+        return Segment(node, name.text[1:], start)
+
+    def visit_include(self, node, children):
+        filename = query_one(children, String)
+        return Include(node, filename)
+
+    def visit_def(self, node, children):
+        #print(node)
+        q = query(children, Expr)
+
+        #print(name, body)
+        #return Macro(node, name.value, body=[body])
+
     ### STORAGE ###
+
     def visit_storage(self, node, children):
         return children[0]
 
     def visit_byte(self, node, children):
-        return Storage(node, 8, tuple([v for k,v in query(children, ExprValue)]))
+        return Storage(node, 8, tuple([v for v in query(children, ExprValue)]))
 
     def visit_word(self, node, children):
-        return Storage(node, 16, tuple([v for k,v in query(children, ExprValue)]))
+        return Storage(node, 16, tuple([v for v in query(children, ExprValue)]))
 
     ### STRING ###
 
     def visit_string(self, node, children):
         text = ''
-        for k,v in query(node, 'stringchar', 'escapechar'):
-            if k == 'escapechar':
+        for v in query(node, 'stringchar', 'escapechar'):
+            if v.text[0] == '\\':
                 value = {
                     r'\r': '\r',
                     r'\n': '\n',
                     r'\t': '\t',
                     r'\v': '\v',
                     r'\"': '"',
+                    r'\\': '\\',
                 }.get(v.text, None)
                 if value == None:
                     raise ParseException(node, f"Invalid escape sequence '{v.text}'")
@@ -160,6 +191,12 @@ class Cleaner(NodeVisitor):
 
     def visit_base10(self, node, children):
         return ExprValue(node, int(node.text, base=10))
+
+    ### EXPR ###
+
+    def visit_ident(self, node, children):
+        return ExprName(node, node.text)
+
 
     ### MISC ###
 

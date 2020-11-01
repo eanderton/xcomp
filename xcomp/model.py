@@ -10,26 +10,26 @@ class FileLoader(object):
         with open(path) as f:
             return f.read()
 
-@attrs(auto_attribs=True)
-class Position(object):
-    line: int
-    column: int
-    source: str
 
-    @classmethod
-    def create(cls, other):
-        return cls(other.line, other.column, other.source)
-
+class Model(object):
+    def prettily(self, error=None):
+        ret = f'Model <{self.__class__.name}>'
 
 @attrs(auto_attribs=True)
-class String(object):
+class String(Model):
     node: Node
     value: str
 
 
 @attrs(auto_attribs=True)
-class Label(object):
-    pos: Position
+class Include(Model):
+    node: Node
+    filename: String
+
+
+@attrs(auto_attribs=True)
+class Label(Model):
+    node: Node
     addr: int = 0
     resolved: bool = False
 
@@ -48,7 +48,7 @@ class ExprContext(ABC):
 
 @attrs(auto_attribs=True)
 class ExprBinaryOp(Expr):
-    pos: Position
+    node: Node
     oper: Callable
     left: Any = None
     right: Any = None
@@ -59,7 +59,7 @@ class ExprBinaryOp(Expr):
 
 @attrs(auto_attribs=True)
 class ExprUnaryOp(Expr):
-    pos: Position
+    node: Node
     oper: Callable
     arg: Any = None
 
@@ -77,7 +77,7 @@ class ExprValue(Expr):
 
 @attrs(auto_attribs=True)
 class ExprName(Expr):
-    pos: Position
+    node: Node
     value: str
 
     def eval(self, ctx):
@@ -85,7 +85,8 @@ class ExprName(Expr):
 
 
 @attrs(auto_attribs=True)
-class Macro(object):
+class Macro(Model):
+    node: Node
     name: str = None
     params: List[str] = Factory(list)
     body: List[Any] = Factory(list)
@@ -117,34 +118,35 @@ class AddressMode(Enum):
     unknown = auto()
 
 @attrs(auto_attribs=True)
-class OpCode(object):
+class OpCode(Model):
     name: str
     mode: AddressMode
     value: int
 
 @attrs(auto_attribs=True)
-class Op(object):
-    pos: Position
+class Op(Model):
+    node: Node
     op: OpCode
     mode: AddressMode = AddressMode.unknown
     arg: Any = None
 
 
 @attrs(auto_attribs=True)
-class Storage(object):
+class Storage(Model):
     node: Node
     width: int
     items: List[int]
 
 
 @attrs(auto_attribs=True)
-class Segment(object):
+class Segment(Model):
+    node: Node
     name: str
-    org: int
+    start: [int, None]
     code: List[Any] = Factory(list)
 
 @attrs(auto_attribs=True)
-class Program(object):
+class Program(Model):
     segments: Dict[str, Segment] = Factory(dict)
     macros: Dict[str, Macro] = Factory(dict)
     defs: Dict[str, Macro] = Factory(dict)
