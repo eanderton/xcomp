@@ -77,9 +77,6 @@ class Parser(ASTParser):
     #def visit_core_syntax(self, node, children):
     #    return children[0]
 
-    def visit_comment(self, *args):
-        return None
-
     def visit_segment(self, node, children):
         name, addr = children
         if addr == Empty:
@@ -130,7 +127,6 @@ class Parser(ASTParser):
     ### NUMBER ###
 
     def visit_base2(self, node, children):
-        print(children)
         start, match = children  # discard prefix
         return ExprValue(start.pos, int(match.text, base=2))
 
