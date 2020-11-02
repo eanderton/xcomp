@@ -3,6 +3,7 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node
 from xcomp.parser2 import *
 from xcomp.model import *
+from xcomp.ast import ast_print
 from pragma_utils import selfish
 
 
@@ -16,30 +17,15 @@ class TestExprContext(ExprContext):
         return self.names[label_name]
 
 
-class ParserUtilsTest(unittest.TestCase):
-    def setUp(self):
-        self.parser = Grammar(xcomp_grammar)
-
-    def parse(self, text, rule):
-        return self.parser[rule].parse(text)
-
-    def test_query(self):
-        result = self.parse(r'"hello\nworld"', 'string')
-        text = ''
-        q = tuple(query(result, 'stringchar', 'escapechar'))
-        for v in q:
-            text += v.text
-        self.assertEqual(r"hello\nworld", text)
-
-
 class ParserTest(unittest.TestCase):
     def setUp(self):
         self.parser = Parser()
         self.ctx = TestExprContext()
 
-    def parse(self, *args, **kwargs):
-        return self.parser.parse(*args, **kwargs)
-
+    def parse(self, text, rule):
+        result = self.parser.parse(text=text, rule=rule)
+        ast_print(result)
+        return result
 
 class SegmentTest(ParserTest):
     def test_segment(self):
@@ -61,7 +47,7 @@ class IncludeTest(ParserTest):
 
 class DefTest(ParserTest):
     def test_def(self):
-        result = self.parse('.def foo bar')
+        result = self.parse('.def foo bar', 'def')
         self.assertEqual(result.name, 'foo')
         self.assertEqual(result.body[0].value, 'bar')
 
@@ -69,13 +55,13 @@ class DefTest(ParserTest):
 
 class StorageTest(ParserTest):
     def test_parse_byte(self):
-        result = self.parse('.byte 01','storage')
+        result = self.parse('.byte 01','byte_storage')
         self.assertEqual(result.width, 8)
         self.assertEqual([x.eval(self.ctx) for x in result.items],
                 [1])
 
     def test_parse_byte_many(self):
-        result = self.parse(".byte 01, 02, 03",'byte')
+        result = self.parse(".byte 01, 02, 03",'byte_storage')
         self.assertEqual(result.width, 8)
         self.assertEqual([x.eval(self.ctx) for x in result.items],
                 [1, 2, 3])
@@ -96,27 +82,19 @@ class StringTest(ParserTest):
 class NumberTest(ParserTest):
     @selfish('parser')
     def test_parse_base2(self, parser):
-        result = parser.parse('%101010', 'number')
+        result = self.parse('%101010', 'number')
         self.assertEqual(result.value, 0b101010)
 
     @selfish('parser')
     def test_parse_base16(self, parser):
-        result = parser.parse('0xcafe', 'number')
+        result = self.parse('0xcafe', 'number')
         self.assertEqual(result.value, 0xcafe)
 
     @selfish('parser')
     def test_parse_base10(self, parser):
-        result = parser.parse('12345', 'number')
+        result = self.parse('12345', 'number')
         self.assertEqual(result.value, 12345)
 
-    @selfish('parser')
-    def test_parse_number(self, parser):
-        result = parser.parse('%101010', 'number')
-        self.assertEqual(result.value, 0b101010)
-        result = parser.parse('0xcafe', 'number')
-        self.assertEqual(result.value, 0xcafe)
-        result = parser.parse('12345', 'number')
-        self.assertEqual(result.value, 12345)
 
 class CompositeTest(unittest.TestCase):
     pass

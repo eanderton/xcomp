@@ -2,7 +2,7 @@ from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
 from enum import Enum, auto
-from parsimonious.nodes import Node
+from xcomp.ast import Pos
 
 # TODO: flesh this out with search paths
 class FileLoader(object):
@@ -17,19 +17,19 @@ class Model(object):
 
 @attrs(auto_attribs=True)
 class String(Model):
-    node: Node
+    pos: Pos
     value: str
 
 
 @attrs(auto_attribs=True)
 class Include(Model):
-    node: Node
+    pos: Pos
     filename: String
 
 
 @attrs(auto_attribs=True)
 class Label(Model):
-    node: Node
+    pos: Pos
     addr: int = 0
     resolved: bool = False
 
@@ -48,7 +48,7 @@ class ExprContext(ABC):
 
 @attrs(auto_attribs=True)
 class ExprBinaryOp(Expr):
-    node: Node
+    pos: Pos
     oper: Callable
     left: Any = None
     right: Any = None
@@ -59,7 +59,7 @@ class ExprBinaryOp(Expr):
 
 @attrs(auto_attribs=True)
 class ExprUnaryOp(Expr):
-    node: Node
+    pos: Pos
     oper: Callable
     arg: Any = None
 
@@ -69,7 +69,7 @@ class ExprUnaryOp(Expr):
 
 @attrs(auto_attribs=True)
 class ExprValue(Expr):
-    node: Node
+    pos: Pos
     value: int
 
     def eval(self, ctx):
@@ -77,7 +77,7 @@ class ExprValue(Expr):
 
 @attrs(auto_attribs=True)
 class ExprName(Expr):
-    node: Node
+    pos: Pos
     value: str
 
     def eval(self, ctx):
@@ -86,7 +86,7 @@ class ExprName(Expr):
 
 @attrs(auto_attribs=True)
 class Macro(Model):
-    node: Node
+    pos: Pos
     name: str = None
     params: List[str] = Factory(list)
     body: List[Any] = Factory(list)
@@ -125,7 +125,7 @@ class OpCode(Model):
 
 @attrs(auto_attribs=True)
 class Op(Model):
-    node: Node
+    pos: Pos
     op: OpCode
     mode: AddressMode = AddressMode.unknown
     arg: Any = None
@@ -133,14 +133,14 @@ class Op(Model):
 
 @attrs(auto_attribs=True)
 class Storage(Model):
-    node: Node
+    pos: Pos
     width: int
     items: List[int]
 
 
 @attrs(auto_attribs=True)
 class Segment(Model):
-    node: Node
+    pos: Pos
     name: str
     start: [int, None]
     code: List[Any] = Factory(list)
