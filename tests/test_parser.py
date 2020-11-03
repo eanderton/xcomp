@@ -1,60 +1,128 @@
 import unittest
-from inspect import cleandoc
+from parsimonious.grammar import Grammar
+from parsimonious.nodes import Node
+from xcomp.parser import *
+from xcomp.model import *
+from xcomp.ast import ast_print
 from pragma_utils import selfish
-from oxeye.exception import ParseError
-from oxeye.testing import *
-from xcomp.prep import Preprocessor
-from xcomp.parser import Parser6502
-from xcomp.lexer import Tok
-from pprint import pprint
 
-class __ParserTest(OxeyeTest):
-    def __init__(self, *args, **kwargs):
-        self._test_files = {}
-        super().__init__(*args, **kwargs)
 
-    def _load_file(self, path):
-        return self._test_files[path]
+class TestExprContext(ExprContext):
+    __test__ = False
 
-    def _set_file(self, content, path='<internal>'):
-        self._test_files[path] = content
+    def __init__(self):
+        self.names = {}
 
+    def resolve_name(self, label_name):
+        return self.names[label_name]
+
+
+class ParserTest(unittest.TestCase):
     def setUp(self):
-        self.maxDif = None
-        self.pre = Preprocessor(self._load_file)
-        self.parser = Parser6502()
-        super().setUp()
+        self.parser = Parser()
+        self.ctx = TestExprContext()
 
-    def _parse(self, text, path='<internal>'):
-        self._set_file(text, path)
-        tokens = self.pre.parse(path)
-        print('Tokens:', tokens)
-        self.parser.parse(tokens)
-
-    @selfish('parser')
-    def tearDown(self, parser):
-        dbg = {x:getattr(parser, x) for x in [
-            'segments',
-            ]}
-        dbg['_trace'] = parser._trace
-        pprint(dbg, indent=1, width=40)
+    def parse(self, text, rule):
+        result = self.parser.parse(text=text, rule=rule)
+        ast_print(result)
+        return result
 
 
+class SegmentTest(ParserTest):
+    def test_segment(self):
+        result = self.parse('.text', 'segment')
+        self.assertEqual(result.name, 'text')
+        self.assertEqual(result.start, None)
 
-class __TestParserBasic(__ParserTest):
-    @selfish('parser')
-    def test_empty(self, parser):
-        self._parse("""
-        """)
-        # TODO: figure out valid tests
+    def test_segment_start(self):
+        result = self.parse('.data 0x1234', 'segment')
+        self.assertEqual(result.name, 'data')
+        self.assertEqual(result.start.value, 0x1234)
 
-    @selfish('parser')
-    def test_segments(self, parser):
-        self._parse("""
-        .zero
-        .text
-        .data
-        .bss
-        """)
-        # TODO: figure out valid tests
+
+class IncludeTest(ParserTest):
+    def test_include(self):
+        result = self.parse('.include "foobar.asm"', 'include')
+        self.assertEqual(result.filename.value, 'foobar.asm')
+
+
+class DefTest(ParserTest):
+    def test_def(self):
+        result = self.parse('.def foo bar', 'def')
+        self.assertEqual(result.name, 'foo')
+        self.assertEqual(result.body[0].value, 'bar')
+
+
+
+class StorageTest(ParserTest):
+    def test_parse_byte(self):
+        result = self.parse('.byte 01','byte_storage')
+        self.assertEqual(result.width, 8)
+        self.assertEqual([x.eval(self.ctx) for x in result.items],
+                [1])
+
+    def test_parse_byte_many(self):
+        result = self.parse(".byte 01, 02, 03",'byte_storage')
+        self.assertEqual(result.width, 8)
+        self.assertEqual([x.eval(self.ctx) for x in result.items],
+                [1, 2, 3])
+
+
+class StringTest(ParserTest):
+    def test_parse_escapechar(self):
+        result = self.parse(r'"\n"', 'string')
+        self.assertEqual(result.value, "\n")
+        with self.assertRaisesRegex(ParseException, r"Invalid escape sequence '\\x'"):
+            self.parse(r'"\x"', 'string')
+
+    def test_parse_string(self):
+        result = self.parse('"foobar"', 'string')
+        self.assertEqual(result.value, 'foobar')
+
+
+class NumberTest(ParserTest):
+    def test_parse_base2(self):
+        result = self.parse('%101010', 'number')
+        self.assertEqual(result.value, 0b101010)
+
+    def test_parse_base16(self):
+        result = self.parse('0xcafe', 'number')
+        self.assertEqual(result.value, 0xcafe)
+
+    def test_parse_base10(self):
+        result = self.parse('12345', 'number')
+        self.assertEqual(result.value, 12345)
+
+class MacroTest(ParserTest):
+    def test_macro_params(self):
+        result = self.parse('one', 'macro_params')
+        self.assertEqual(result, ['one'])
+        result = self.parse('one, two, three', 'macro_params')
+        self.assertEqual(result, ['one','two', 'three'])
+
+    def test_macro(self):
+        result = self.parse(""".macro foo .endmacro""", 'macro')
+        self.assertEqual(result.name, 'foo')
+        self.assertEqual(result.params, [])
+        self.assertEqual(result.body, None) # tuple())
+        result = self.parse(""".macro foo, a,b,c
+        nop
+        .endmacro""", 'macro')
+        self.assertEqual(result.name, 'foo')
+        self.assertEqual(result.params, ['a','b','c'])
+        self.assertEqual(result.body.value, 'nop')
+
+
+class CompositeTest(unittest.TestCase):
+    pass
+
+test_program = """
+; hello world
+.def foo 0x1234
+.macro foo
+    nop
+.endmacro
+nop
+"""
+
 

@@ -1,112 +1,106 @@
-'''
-Parser for the compiler.
-'''
-
-from functools import partial
-from oxeye.token import Token, TokenParser
-from oxeye.pred import nop
-from oxeye.rule import rule_end
-from oxeye.match import *
+from itertools import chain
+from parsimonious.grammar import Grammar, TokenGrammar
 from xcomp.model import *
-from xcomp.lexer import Tok, Lexer
-from xcomp.cpu6502 import *
-from xcomp.model import *
+from xcomp.grammar import grammar as xcomp_grammar
+from xcomp.grammar import ignore as xcomp_ignore
+from xcomp.ast import ASTParser, ASTNode, Empty
 
-class Parser6502(TokenParser):
-    def _append(self, item):
-        self._segment.code.append(item)
 
-    def _do_segment(self, name: Token):
-        ''' Sets the current segment based on the token name. '''
-        self._segment = self.segments[name.value]
+class ParseException(Exception):
+    def __init__(self, node, *args, **kwargs):
+        self.node = node
+        super().__init__(*args, **kwargs)
 
-    def _do_label(self, tokens):
-        ''' Creates a label from a token. '''
-        name = tokens[0].value
-        label = Label(name)
-        self._append(Label(name))
 
-    def _start_words(self, _):
-        pass
+class Parser(ASTParser):
 
-    def _start_bytes(self, _):
-        pass
+    def __init__(self):
+        super().__init__(grammar_ebnf=xcomp_grammar,
+                ignored=xcomp_ignore,
+                unwrapped_exceptions=[ParseException])
 
-    def _start_op(self, opcode):
-        ''' Create an operation instnace in the current segment. '''
-        pos = Position.create(self)
-        self._op = Op(pos, opcode)
-        self._segment.code.append(self._op)
-        self._expr = []
+    #def visit_goal(self, node, children):
+    #    return children
 
-    def _do_address_mode(self, mode, *tokens):
-        self._op.mode = mode
+    #def visit_core_syntax(self, node, children):
+    #    return children[0]
 
-    def reset(self):
-        ''' Resets the parser state. '''
+    def visit_segment(self, node, children):
+        name, addr = children
+        if addr == Empty:
+            addr = None
+        return Segment(name.pos, name.text[1:], addr)
 
-        # build default segments and set default to .text
-        self.segments = {
-            '.zero': Segment('.zero', 0),
-            '.text': Segment('.text', 0),
-            '.data': Segment('.data', 0),
-            '.bss': Segment('.bss', 0),
-        }
+    def visit_include(self, node, children):
+        start, filename = children
+        return Include(start.pos, filename)
 
-        # set parser state variables
-        self._segment = self.segments['.text']
-        self._opcode = None
-        self._op_args = []
-        super().reset()
+    def visit_def(self, node, children):
+        start, name, expr = children
+        return Macro(start.pos, name.value, body=[expr])
 
-    def parse(self, tokens):
-        super().parse(tokens)
+    def visit_macro(self, node, children):
+        print('macro:', children)
+        start, params, body, _ = children
+        name, *params = tuple(params)
+        if body == Empty:
+            body = None
+        return Macro(start.pos, name, params, body)
 
-    def generate_grammar(self):
-        ''' Generates the grammar for the parser. '''
-        unary_ops = {
-            '-': lambda x: -x,
-            '>': lambda x: ((x & 0xFF00) >> 8),
-            '<': lambda x: x & 0xFF,
-            '^': lambda x: x ^ 0xFFFF,  # TODO; needs to consider width
-        }
+    def visit_macro_params(self, node, children):
+        head, remain = children
+        result = [head.value]
+        if remain != Empty:
+            result.extend(remain[0])
+        return result
 
-        binary_ops = {
-            '/': lambda a,b: a / b,
-            '*': lambda a,b: a * b,
-            '-': lambda a,b: a - b,
-            '+': lambda a,b: a + b,
-            '|': lambda a,b: a | b,
-            '&': lambda a,b: a & b,
-        }
+    ### STORAGE ###
 
-        def expr_parse(parent_state):
-            term_state = parent_state + '_expr_term'
-            oper_state = parent_state + '_expr_oper'
-            return {
-                term_state: (
-                    ('(', '_push_group', parent_state),
-                    (')', '_pop_group', term_state),
-                    (match_lut(unary_ops), '_add_unary_expr', term_state),
-                    (Tok.number, '_set_expr', oper_state),
-                    (Tok.ident, '_set_expr', oper_state),
-                    self._error('Expected expression'),
-                ),
-                oper_state: (
-                    (')', '_pop_group', term_state),
-                    (match_lut(binary_ops), '_add_binary_expr', term_state),
-                    self._error('Expected operator'),
-                ),
-            }
+    def visit_byte_storage(self, node, children):
+        start, first, exprs = children
+        return Storage(start.pos, 8, tuple(chain([first], *exprs)))
 
-        return {
-            'goal': (
-                (Tok.byte, '_start_bytes', 'dataset'),
-                (Tok.word, '_start_words', 'dataset'),
-                (Tok.segment, '_do_segment', 'goal'),
-                (match_seq([Tok.ident, ':']), '_do_label', 'goal'),
-                (match_lut(opcode_xref), '_start_op', 'op'),
-                rule_end,
-                self._error('unexpected token'),
-            ),
-        }
+    def visit_word_storage(self, node, children):
+        _, first, exprs = children
+        return Storage(node.pos, 16, tuple(chain([first], *exprs)))
+
+    ### STRING ###
+
+    def visit_string(self, node, children):
+        start, chars, _ = children
+        return String(start.pos, ''.join(chars))
+
+    def visit_stringchar(self, node, children):
+        return node.text
+
+    def visit_escapechar(self, node, children):
+        _, ch = children
+        value = {
+            'r': '\r',
+            'n': '\n',
+            't': '\t',
+            'v': '\v',
+            '"': '"',
+            '\\': '\\',
+        }.get(ch.text, None)
+        if value == None:
+            raise ParseException(ch, f"Invalid escape sequence '\\{ch.text}'")
+        return value
+
+    ### NUMBER ###
+
+    def visit_base2(self, node, children):
+        start, match = children  # discard prefix
+        return ExprValue(start.pos, int(match.text, base=2))
+
+    def visit_base16(self, node, children):
+        start, match = children  # discard prefix
+        return ExprValue(start.pos, int(match.text, base=16))
+
+    def visit_base10(self, node, children):
+        return ExprValue(node.pos, int(node.text, base=10))
+
+    ### EXPR ###
+
+    def visit_ident(self, node, children):
+        return ExprName(node.pos, node.text)

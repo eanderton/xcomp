@@ -51,65 +51,68 @@ class TestAST(unittest.TestCase):
         ast_print(ast)
         return ast
 
+    def node(self, name, full_text, start, end, children=None):
+        return ASTNode(name, Pos(start, end), full_text, children)
+
     def test_simple_literal(self):
         full_text="hello"
         self.assertEqual(self.parse(full_text, 'goal'), (
-            ASTNode('alpha', full_text, 0, 5),
+            self.node('alpha', full_text, 0, 5),
         ))
 
     def test_visit_value(self):
         full_text="world"
         self.assertEqual(self.parse(full_text, 'goal'), (
-            ASTNode('beta', full_text, 0, 5),
+            self.node('beta', full_text, 0, 5),
         ))
 
     def test_negate(self):
         full_text="-5"
         self.assertEqual(self.parse(full_text, 'expr'), (
-            ASTNode('literal', full_text, 0, 1),
-            ASTNode('value', full_text, 1, 2),
+            self.node('literal', full_text, 0, 1),
+            self.node('value', full_text, 1, 2),
         ))
 
     def test_add(self):
         full_text="3+2"
         self.assertEqual(self.parse(full_text, 'expr'), (
-            ASTNode('value', full_text, 0, 1),
-            ASTNode('literal', full_text, 1, 2),
-            ASTNode('value', full_text, 2, 3),
+            self.node('value', full_text, 0, 1),
+            self.node('literal', full_text, 1, 2),
+            self.node('value', full_text, 2, 3),
         ))
 
     def test_mul(self):
         full_text="3*2"
         self.assertEqual(self.parse(full_text, 'expr'), (
-            ASTNode('value', full_text, 0, 1),
-            ASTNode('literal', full_text, 1, 2),
-            ASTNode('value', full_text, 2, 3),
+            self.node('value', full_text, 0, 1),
+            self.node('literal', full_text, 1, 2),
+            self.node('value', full_text, 2, 3),
         ))
 
     def test_group(self):
         full_text="(3*2)"
         self.assertEqual(self.parse(full_text, 'expr'), (
-            ASTNode('value', full_text, 1, 2),
-            ASTNode('literal', full_text, 2, 3),
-            ASTNode('value', full_text, 3, 4),
+            self.node('value', full_text, 1, 2),
+            self.node('literal', full_text, 2, 3),
+            self.node('value', full_text, 3, 4),
         ))
 
     def test_complex(self):
         full_text="(3*2+7/2-12)"
         self.assertEqual(self.parse(full_text, 'expr'), (
             (
-                ASTNode('value', full_text, 1, 2),
-                ASTNode('literal', full_text, 2, 3),
-                ASTNode('value', full_text, 3, 4),
+                self.node('value', full_text, 1, 2),
+                self.node('literal', full_text, 2, 3),
+                self.node('value', full_text, 3, 4),
             ),
-            ASTNode('literal', full_text, 4, 5),
+            self.node('literal', full_text, 4, 5),
             (
                 (
-                    ASTNode('value', full_text, 5, 6),
-                    ASTNode('literal', full_text, 6, 7),
-                    ASTNode('value', full_text, 7, 8),
+                    self.node('value', full_text, 5, 6),
+                    self.node('literal', full_text, 6, 7),
+                    self.node('value', full_text, 7, 8),
                 ),
-                ASTNode('literal', full_text, 8, 9),
-                ASTNode('value', full_text, 9, 11),
+                self.node('literal', full_text, 8, 9),
+                self.node('value', full_text, 9, 11),
             ),
         ))
