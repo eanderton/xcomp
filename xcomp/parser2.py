@@ -1,62 +1,9 @@
 from itertools import chain
 from parsimonious.grammar import Grammar, TokenGrammar
 from xcomp.model import *
+from xcomp.grammar import grammar as xcomp_grammar
+from xcomp.grammar import ignore as xcomp_ignore
 from xcomp.ast import ASTParser, ASTNode, Empty
-
-
-xcomp_grammar = r"""
-goal            = (macro / def / core_syntax)*
-core_syntax     = comment / byte_storage / word_storage / segment / oper / _
-
-comment         = ~r";\s*.*(?=\n|$)"
-
-byte_storage    = ".byte" _ expr _ (comma _ expr _)*
-word_storage    = ".word" _ expr _ (comma _ expr _)*
-
-segment         = segment_name _ number?
-segment_name    = ".zero" / ".text" / ".data" / ".bss"
-
-include         = ".include" _ string
-
-def             = ".def" _ ident _ expr
-
-macro           = ".macro" _ macro_params? _ macro_body? _ ".endmacro"
-macro_params    = ident _ (comma _ macro_params)?
-macro_body      = core_syntax*
-
-oper            = ident _ oper_args?
-oper_args       = expr
-
-expr            = ident / number
-
-string          = "\"" (escapechar / stringchar)* "\""
-stringchar      = ~r'[^\"]+'
-escapechar      = "\\" any
-
-number          =  base2 / base16 / base10
-base2           = "%" ~r"[01]{1,16}"
-base16          = ~r"\$|0x" ~r"[0-9a-fA-F]{1,4}"
-base10          = ~r"(\d+)"
-
-ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
-
-lparen          = "("
-rparen          = ")"
-plus            = "+"
-minus           = "-"
-slash           = "/"
-carrot          = "^"
-pipe            = "|"
-ampersand       = "&"
-comma           = ","
-hash            = "#"
-lessthan        = "<"
-morethan        = ">"
-colon           = ":"
-
-any             = ~r"."
-_              = ~r"\s*"
-"""
 
 
 class ParseException(Exception):
@@ -68,7 +15,7 @@ class Parser(ASTParser):
 
     def __init__(self):
         super().__init__(grammar_ebnf=xcomp_grammar,
-                ignored=['_', 'comma', 'comment'],
+                ignored=xcomp_ignore,
                 unwrapped_exceptions=[ParseException])
 
     #def visit_goal(self, node, children):
@@ -90,6 +37,21 @@ class Parser(ASTParser):
     def visit_def(self, node, children):
         start, name, expr = children
         return Macro(start.pos, name.value, body=[expr])
+
+    def visit_macro(self, node, children):
+        print('macro:', children)
+        start, params, body, _ = children
+        name, *params = tuple(params)
+        if body == Empty:
+            body = None
+        return Macro(start.pos, name, params, body)
+
+    def visit_macro_params(self, node, children):
+        head, remain = children
+        result = [head.value]
+        if remain != Empty:
+            result.extend(remain[0])
+        return result
 
     ### STORAGE ###
 
@@ -141,16 +103,3 @@ class Parser(ASTParser):
 
     def visit_ident(self, node, children):
         return ExprName(node.pos, node.text)
-
-
-class Preprocessor(object): #NodeVisitor):
-    def __init__(self):
-        self.macros = {}
-
-    def visit_macro(self, node, children):
-        print('macro:', node, [x.expr for x in children])
-        return node
-
-    def generic_visit(self, node, visited_children):
-        ''' lets all other nodes through to output '''
-        return node

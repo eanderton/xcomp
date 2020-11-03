@@ -119,7 +119,7 @@ class ASTParser(object):
             fn = getattr(self, f'visit_{node.expr_name}', None)
             node = self.generic_visit(node, children)  # wrap node before we call
             if fn:
-                return fn(node, children)
+                node = fn(node, children)
         return node
 
     def generic_visit(self, node, children):

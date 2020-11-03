@@ -27,6 +27,7 @@ class ParserTest(unittest.TestCase):
         ast_print(result)
         return result
 
+
 class SegmentTest(ParserTest):
     def test_segment(self):
         result = self.parse('.text', 'segment')
@@ -80,20 +81,36 @@ class StringTest(ParserTest):
 
 
 class NumberTest(ParserTest):
-    @selfish('parser')
-    def test_parse_base2(self, parser):
+    def test_parse_base2(self):
         result = self.parse('%101010', 'number')
         self.assertEqual(result.value, 0b101010)
 
-    @selfish('parser')
-    def test_parse_base16(self, parser):
+    def test_parse_base16(self):
         result = self.parse('0xcafe', 'number')
         self.assertEqual(result.value, 0xcafe)
 
-    @selfish('parser')
-    def test_parse_base10(self, parser):
+    def test_parse_base10(self):
         result = self.parse('12345', 'number')
         self.assertEqual(result.value, 12345)
+
+class MacroTest(ParserTest):
+    def test_macro_params(self):
+        result = self.parse('one', 'macro_params')
+        self.assertEqual(result, ['one'])
+        result = self.parse('one, two, three', 'macro_params')
+        self.assertEqual(result, ['one','two', 'three'])
+
+    def test_macro(self):
+        result = self.parse(""".macro foo .endmacro""", 'macro')
+        self.assertEqual(result.name, 'foo')
+        self.assertEqual(result.params, [])
+        self.assertEqual(result.body, None) # tuple())
+        result = self.parse(""".macro foo, a,b,c
+        nop
+        .endmacro""", 'macro')
+        self.assertEqual(result.name, 'foo')
+        self.assertEqual(result.params, ['a','b','c'])
+        self.assertEqual(result.body.value, 'nop')
 
 
 class CompositeTest(unittest.TestCase):
