@@ -15,14 +15,28 @@ include         = ".include" _ string
 
 def             = ".def" _ ident _ expr
 
-macro           = ".macro" _ macro_params _ macro_body? _ ".endmacro"
+macro           = ".macro" _ macro_params _ macro_body _ ".endmacro"
 macro_params    = ident _ (comma _ macro_params _)?
-macro_body      = expr #core_syntax*
+macro_body      = core_syntax*
 
-oper            = ident _ oper_args?
-oper_args       = expr
+expr8           = expr
+expr16          = expr
 
-expr            = ident / number
+# PEMDAS
+expr = sub / add / negate / term
+negate = minus _ term
+add = term _ plus _ expr
+sub = term _ plus _ expr
+
+term =  div / mul / exp
+mul = exp _ asterisk _ exp
+div = exp _ slash _ exp
+
+exp = pow / fact
+pow = fact carrot fact
+fact = ident / string / number / group_expr
+
+group_expr = lparen _ expr _ rparen
 
 string          = quote (escapechar / stringchar)* quote
 stringchar      = ~r'[^\"]+'
@@ -49,9 +63,12 @@ hash            = "#"
 lessthan        = "<"
 morethan        = ">"
 colon           = ":"
+asterisk        = "*"
 
 any             = ~r"."
 _              = ~r"\s*"
 """
 
-ignore = ('comment', 'comma', '_')
+ignore = ('comment', 'comma', 'hash', 'lparen', 'rparen', 'plus', 'minus',
+        'slash', 'carrot', 'pipe', 'ampersand', 'comma', 'hash', 'lessthan',
+        'morehtan', 'colon', 'asterisk', '_')

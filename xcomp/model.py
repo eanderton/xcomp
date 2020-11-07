@@ -2,7 +2,7 @@ from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
 from enum import Enum, auto
-from xcomp.ast import Pos
+from xcomp.flat_ast import Pos
 
 # TODO: flesh this out with search paths
 class FileLoader(object):
@@ -101,7 +101,7 @@ class Macro(Model):
 
 
 class AddressMode(Enum):
-    accumulator = auto()  # implied?
+    accumulator = auto()
     absolute = auto()
     absolute_x = auto()
     absolute_y = auto()
@@ -114,8 +114,8 @@ class AddressMode(Enum):
     zeropage = auto()
     zeropage_x = auto()
     zeropage_y = auto()
-    pseduo_number = auto()
     unknown = auto()
+
 
 @attrs(auto_attribs=True)
 class OpCode(Model):
@@ -123,12 +123,12 @@ class OpCode(Model):
     mode: AddressMode
     value: int
 
+
 @attrs(auto_attribs=True)
 class Op(Model):
     pos: Pos
     op: OpCode
-    mode: AddressMode = AddressMode.unknown
-    arg: Any = None
+    arg: Any = Factory(list)
 
 
 @attrs(auto_attribs=True)
@@ -144,6 +144,7 @@ class Segment(Model):
     name: str
     start: [int, None]
     code: List[Any] = Factory(list)
+
 
 @attrs(auto_attribs=True)
 class Program(Model):

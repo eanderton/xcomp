@@ -1,6 +1,12 @@
+"""
+Abstraction of the 6502 processor CPU opcodes.
+"""
 
+from functools import partialmethod
+from xcomp.model import Op
 from xcomp.model import OpCode
 from xcomp.model import AddressMode as M
+
 
 opcode_table = (
     OpCode("and", M.immediate,   0x29),
@@ -155,3 +161,70 @@ for op in opcode_table:
 
 # opcodes by machinecode
 opcode_disasm = {x.value: x for x in opcode_table}
+
+# grammar parameter specs by addressing mode
+addressmode_params = {
+    M.accumulator: ['"a"'],
+    M.absolute:    ['expr16'],
+    M.absolute_x:  ['expr16', 'comma', '"x"'],
+    M.absolute_y:  ['expr16', 'comma', '"y"'],
+    M.immediate:   ['hash', 'expr8'],
+    M.implied:     [],
+    M.indirect:    ['lparen', 'expr16', 'rparen'],
+    M.indirect_x:  ['lparen', 'expr8', 'comma', '"x"', 'rparen'],
+    M.indirect_y:  ['lparen', 'expr8', 'rparen', 'comma', '"y"'],
+    M.relative:    ['expr8'],
+    M.zeropage:    ['expr8'],
+    M.zeropage_x:  ['expr8', 'comma', '"x"'],
+    M.zeropage_y:  ['expr8', 'comma', '"y"'],
+}
+
+addressmode_args = {
+    M.accumulator: 0,
+    M.absolute:    1,
+    M.absolute_x:  1,
+    M.absolute_y:  1,
+    M.immediate:   1,
+    M.implied:     0,
+    M.indirect:    1,
+    M.indirect_x:  1,
+    M.indirect_y:  1,
+    M.relative:    1,
+    M.zeropage:    1,
+    M.zeropage_x:  1,
+    M.zeropage_y:  1,
+}
+
+
+class Cpu6502Visitor(object):
+    def _visit_no_args(self, op, node, children):
+        return Op(node.pos, op)
+
+    def _visit_one_arg(self, op, node, children):
+        # NOTE: first arg is a literal token for the op name
+        return Op(node.pos, op, children[1])
+
+
+# grammar for 6502 opcodes
+grammar = ''
+
+# flag for import-time initializaiton
+__setup_complete = False
+
+# amend the module by dynamically building the grammar and parser base class
+if not __setup_complete:
+    op_names = []
+    grammar_parts = []
+    for op in opcode_table:
+        expr = f'op_{op.name}_{op.mode.name}'
+        seq = ' _ '.join([f'"{op.name}"'] + addressmode_params[op.mode])
+        op_names.append(expr)
+        grammar_parts.append(f'{expr} = {seq}')
+        if addressmode_args[op.mode]:
+            visit_name = '_visit_one_arg'
+        else:
+            visit_name = '_visit_no_args'
+        fn = partialmethod(getattr(Cpu6502Visitor, visit_name), op)
+        setattr(Cpu6502Visitor, f'visit_{expr}', fn)
+    grammar_parts.append('oper = ' + ' / '.join(op_names))
+    grammar = '\n'.join(grammar_parts)

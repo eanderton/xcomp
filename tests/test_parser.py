@@ -3,7 +3,7 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node
 from xcomp.parser import *
 from xcomp.model import *
-from xcomp.ast import ast_print
+from xcomp.flat_ast import ast_print
 from pragma_utils import selfish
 
 
@@ -25,6 +25,7 @@ class ParserTest(unittest.TestCase):
     def parse(self, text, rule):
         result = self.parser.parse(text=text, rule=rule)
         ast_print(result)
+        #print(self.parser.grammar)
         return result
 
 
@@ -72,7 +73,8 @@ class StringTest(ParserTest):
     def test_parse_escapechar(self):
         result = self.parse(r'"\n"', 'string')
         self.assertEqual(result.value, "\n")
-        with self.assertRaisesRegex(ParseException, r"Invalid escape sequence '\\x'"):
+        with self.assertRaisesRegex(ParseException,
+                r"Invalid escape sequence '\\x'"):
             self.parse(r'"\x"', 'string')
 
     def test_parse_string(self):
@@ -104,13 +106,15 @@ class MacroTest(ParserTest):
         result = self.parse(""".macro foo .endmacro""", 'macro')
         self.assertEqual(result.name, 'foo')
         self.assertEqual(result.params, [])
-        self.assertEqual(result.body, None) # tuple())
+        self.assertEqual(result.body, tuple())
         result = self.parse(""".macro foo, a,b,c
         nop
         .endmacro""", 'macro')
         self.assertEqual(result.name, 'foo')
         self.assertEqual(result.params, ['a','b','c'])
-        self.assertEqual(result.body.value, 'nop')
+        print('body:', result.body)
+        self.assertEqual(len(result.body), 1)
+        self.assertEqual(result.body[0].op.name, 'nop')
 
 
 class CompositeTest(unittest.TestCase):

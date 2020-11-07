@@ -3,7 +3,9 @@ from parsimonious.grammar import Grammar, TokenGrammar
 from xcomp.model import *
 from xcomp.grammar import grammar as xcomp_grammar
 from xcomp.grammar import ignore as xcomp_ignore
-from xcomp.ast import ASTParser, ASTNode, Empty
+from xcomp.flat_ast import ASTParser, ASTNode, Empty
+from xcomp.cpu6502 import grammar as cpu6502_grammar
+from xcomp.cpu6502 import Cpu6502Visitor
 
 
 class ParseException(Exception):
@@ -12,10 +14,10 @@ class ParseException(Exception):
         super().__init__(*args, **kwargs)
 
 
-class Parser(ASTParser):
+class Parser(ASTParser, Cpu6502Visitor):
 
     def __init__(self):
-        super().__init__(grammar_ebnf=xcomp_grammar,
+        super().__init__(grammar_ebnf=xcomp_grammar + cpu6502_grammar,
                 ignored=xcomp_ignore,
                 unwrapped_exceptions=[ParseException])
 
@@ -45,6 +47,7 @@ class Parser(ASTParser):
         name, *params = tuple(params)
         if body == Empty:
             body = None
+        body = tuple([x for x in body if x != Empty])
         return Macro(start.pos, name, params, body)
 
     def visit_macro_params(self, node, children):

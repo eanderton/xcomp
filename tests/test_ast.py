@@ -1,5 +1,5 @@
 import unittest
-from xcomp.ast import *
+from xcomp.flat_ast import *
 
 
 class TestParser(ASTParser):
