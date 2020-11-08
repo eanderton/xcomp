@@ -23,14 +23,14 @@ expr8           = expr
 expr16          = expr
 
 # PEMDAS
-expr = sub / add / negate / term
-negate = minus _ term
-add = term _ plus _ expr
-sub = term _ plus _ expr
+expr            = sub / add / negate / term
+negate          = minus _ term
+add             = term _ plus _ expr
+sub             = term _ plus _ expr
 
-term =  div / mul / exp
-mul = exp _ asterisk _ exp
-div = exp _ slash _ exp
+term            = div / mul / exp
+mul             = exp _ asterisk _ exp
+div             = exp _ slash _ exp
 
 exp = pow / fact
 pow = fact carrot fact
@@ -67,8 +67,10 @@ asterisk        = "*"
 
 any             = ~r"."
 _              = ~r"\s*"
+
+__ignored = "comment" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
+        "plus" / "minus" /
+        "slash" / "carrot" / "pipe" / "ampersand" / "comma" / "hash" / "lessthan" /
+        "morehtan" / "colon" / "asterisk" / "_"
 """
 
-ignore = ('comment', 'comma', 'hash', 'lparen', 'rparen', 'plus', 'minus',
-        'slash', 'carrot', 'pipe', 'ampersand', 'comma', 'hash', 'lessthan',
-        'morehtan', 'colon', 'asterisk', '_')

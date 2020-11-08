@@ -197,12 +197,11 @@ addressmode_args = {
 
 
 class Cpu6502Visitor(object):
-    def _visit_no_args(self, op, node, children):
-        return Op(node.pos, op)
+    def _visit_no_args(self, op, pos, *args):
+        return Op(pos, op)
 
-    def _visit_one_arg(self, op, node, children):
-        # NOTE: first arg is a literal token for the op name
-        return Op(node.pos, op, children[1])
+    def _visit_one_arg(self, op, pos, opname, arg):
+        return Op(pos, op, arg)
 
 
 # grammar for 6502 opcodes

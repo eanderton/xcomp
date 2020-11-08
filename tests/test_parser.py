@@ -1,9 +1,7 @@
 import unittest
 from parsimonious.grammar import Grammar
-from parsimonious.nodes import Node
 from xcomp.parser import *
 from xcomp.model import *
-from xcomp.flat_ast import ast_print
 from pragma_utils import selfish
 
 
@@ -24,7 +22,7 @@ class ParserTest(unittest.TestCase):
 
     def parse(self, text, rule):
         result = self.parser.parse(text=text, rule=rule)
-        ast_print(result)
+        print(result)
         #print(self.parser.grammar)
         return result
 
@@ -58,15 +56,21 @@ class DefTest(ParserTest):
 class StorageTest(ParserTest):
     def test_parse_byte(self):
         result = self.parse('.byte 01','byte_storage')
-        self.assertEqual(result.width, 8)
-        self.assertEqual([x.eval(self.ctx) for x in result.items],
-                [1])
+        self.assertEqual(result,
+            Storage(Pos(0, 8), 8, tuple([
+                ExprValue(Pos(6, 8), 1)
+            ]))
+        )
 
     def test_parse_byte_many(self):
         result = self.parse(".byte 01, 02, 03",'byte_storage')
-        self.assertEqual(result.width, 8)
-        self.assertEqual([x.eval(self.ctx) for x in result.items],
-                [1, 2, 3])
+        self.assertEqual(result,
+            Storage(Pos(0, 16), 8, tuple([
+                ExprValue(Pos(6,8), 1),
+                ExprValue(Pos(10,12), 2),
+                ExprValue(Pos(14,16), 3),
+            ]))
+        )
 
 
 class StringTest(ParserTest):
@@ -85,22 +89,27 @@ class StringTest(ParserTest):
 class NumberTest(ParserTest):
     def test_parse_base2(self):
         result = self.parse('%101010', 'number')
-        self.assertEqual(result.value, 0b101010)
+        self.assertEqual(result[0].value, 0b101010)
 
     def test_parse_base16(self):
         result = self.parse('0xcafe', 'number')
-        self.assertEqual(result.value, 0xcafe)
+        self.assertEqual(result[0].value, 0xcafe)
 
     def test_parse_base10(self):
         result = self.parse('12345', 'number')
-        self.assertEqual(result.value, 12345)
+        self.assertEqual(result[0].value, 12345)
+
 
 class MacroTest(ParserTest):
     def test_macro_params(self):
         result = self.parse('one', 'macro_params')
-        self.assertEqual(result, ['one'])
-        result = self.parse('one, two, three', 'macro_params')
-        self.assertEqual(result, ['one','two', 'three'])
+        self.assertEqual(result,
+            Params(Pos(0, 3), ['one']),
+        )
+        result = self.parse('foo, bar, baz', 'macro_params')
+        self.assertEqual(result,
+            Params(Pos(0, 13, '<internal>'), ['foo', 'bar', 'baz']),
+        )
 
     def test_macro(self):
         result = self.parse(""".macro foo .endmacro""", 'macro')

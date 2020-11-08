@@ -11,24 +11,20 @@ class FileLoader(object):
             return f.read()
 
 
-class Model(object):
-    def prettily(self, error=None):
-        ret = f'Model <{self.__class__.name}>'
-
 @attrs(auto_attribs=True)
-class String(Model):
+class String(object):
     pos: Pos
     value: str
 
 
 @attrs(auto_attribs=True)
-class Include(Model):
+class Include(object):
     pos: Pos
     filename: String
 
 
 @attrs(auto_attribs=True)
-class Label(Model):
+class Label(object):
     pos: Pos
     addr: int = 0
     resolved: bool = False
@@ -85,7 +81,19 @@ class ExprName(Expr):
 
 
 @attrs(auto_attribs=True)
-class Macro(Model):
+class Params(object):
+    pos: Pos
+    names: List[str] = Factory(list)
+
+
+@attrs(auto_attribs=True)
+class Fragment(object):
+    pos: Pos
+    body: List[Any] = Factory(list)
+
+
+@attrs(auto_attribs=True)
+class Macro(object):
     pos: Pos
     name: str = None
     params: List[str] = Factory(list)
@@ -118,28 +126,28 @@ class AddressMode(Enum):
 
 
 @attrs(auto_attribs=True)
-class OpCode(Model):
+class OpCode(object):
     name: str
     mode: AddressMode
     value: int
 
 
 @attrs(auto_attribs=True)
-class Op(Model):
+class Op(object):
     pos: Pos
     op: OpCode
     arg: Any = Factory(list)
 
 
 @attrs(auto_attribs=True)
-class Storage(Model):
+class Storage(object):
     pos: Pos
     width: int
     items: List[int]
 
 
 @attrs(auto_attribs=True)
-class Segment(Model):
+class Segment(object):
     pos: Pos
     name: str
     start: [int, None]
@@ -147,7 +155,7 @@ class Segment(Model):
 
 
 @attrs(auto_attribs=True)
-class Program(Model):
+class Program(object):
     segments: Dict[str, Segment] = Factory(dict)
     macros: Dict[str, Macro] = Factory(dict)
     defs: Dict[str, Macro] = Factory(dict)
