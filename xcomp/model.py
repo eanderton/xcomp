@@ -35,32 +35,98 @@ class Expr(ABC):
     def eval(self, ctx):
         pass
 
-
-class ExprContext(ABC):
     @abstractmethod
-    def resolve_name(self, label_name):
-        pass
+    def validate(self, ctx):
+        return False
 
 
 @attrs(auto_attribs=True)
-class ExprBinaryOp(Expr):
-    pos: Pos
-    oper: Callable
-    left: Any = None
-    right: Any = None
+class ExprContext(object):
+    lookup: Factory(dict)
 
-    def eval(self, ctx):
-        return oper(left.eval(ctx), right.eval(ctx))
+    @abstractmethod
+    def resolve_name(self, label_name):
+        return self.lookup.get(label_name, None)
 
 
 @attrs(auto_attribs=True)
 class ExprUnaryOp(Expr):
     pos: Pos
-    oper: Callable
-    arg: Any = None
+    arg: Expr
 
     def eval(self, ctx):
-        return oper(arg.eval(ctx))
+        return self.oper(self.arg.eval(ctx))
+
+    def validate(self, ctx):
+        return arg.validate(ctx)
+
+
+class Expr8(ExprUnaryOp):
+    def oper(self, a):
+        return a
+
+
+class Expr16(ExprUnaryOp):
+    def oper(self, a):
+        return a
+
+
+class ExprNegate(ExprUnaryOp):
+    def oper(self, a):
+        return -a
+
+
+class ExprLobyte(ExprUnaryOp):
+    def oper(self, a):
+        return -a
+
+
+class ExprHibyte(ExprUnaryOp):
+    def oper(self, a):
+        return -a
+
+
+@attrs(auto_attribs=True)
+class ExprBinaryOp(Expr):
+    pos: Pos
+    left: Expr
+    right: Expr
+
+    def eval(self, ctx):
+        return self.oper(self.left.eval(ctx), self.right.eval(ctx))
+
+    def validate(self, ctx):
+        return a.validate(ctx) and b.validate(ctx)
+
+
+class ExprAdd(ExprBinaryOp):
+    def oper(self, a, b):
+        return a + b
+
+
+class ExprSub(ExprBinaryOp):
+    def oper(self, a, b):
+        return a - b
+
+
+class ExprSub(ExprBinaryOp):
+    def oper(self, a, b):
+        return a - b
+
+
+class ExprMul(ExprBinaryOp):
+    def oper(self, a, b):
+        return a * b
+
+
+class ExprDiv(ExprBinaryOp):
+    def oper(self, a, b):
+        return a / b
+
+
+class ExprPow(ExprBinaryOp):
+    def oper(self, a, b):
+        return a ^ b
 
 
 @attrs(auto_attribs=True)
@@ -71,6 +137,10 @@ class ExprValue(Expr):
     def eval(self, ctx):
         return self.value
 
+    def validate(self, ctx):
+        return True
+
+
 @attrs(auto_attribs=True)
 class ExprName(Expr):
     pos: Pos
@@ -78,6 +148,14 @@ class ExprName(Expr):
 
     def eval(self, ctx):
         return ctx.resolve_name(self.value)
+        value = ctx.resolve_name(self.value)
+        if value is None:
+            raise Exception(f'Identifier {self.value} is undefined.')
+        return value
+
+    def validate(self, ctx):
+        value =  ctx.resolve_name(self.value)
+        return value is not None
 
 
 @attrs(auto_attribs=True)

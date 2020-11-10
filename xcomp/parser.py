@@ -43,6 +43,9 @@ class Parser(ReduceParser, Cpu6502Visitor):
     def visit_macro_body(self, pos, *body):
         return Fragment(pos, body)
 
+    def visit_label(self, pos, name):
+        return Label(pos, name)
+
     ### STORAGE ###
 
     def visit_byte_storage(self, pos, start, *exprs):
@@ -50,6 +53,37 @@ class Parser(ReduceParser, Cpu6502Visitor):
 
     def visit_word_storage(self, pos, start, *exprs):
         return Storage(pos, 16, exprs)
+
+    ### EXPRESSIONS ###
+    def visit_expr8(self, pos, expr):
+        return Expr8(pos, expr)
+
+    def visit_expr16(self, pos, expr):
+        return Expr16(pos, expr)
+
+    def visit_negate(self, pos, a):
+        return ExprNegate(pos, a)
+
+    def visit_lobyte(self, pos, a):
+        return ExprLobyte(pos, a)
+
+    def visit_hibyte(self, pos, a):
+        return ExprHibyte(pos, a)
+
+    def visit_add(self, pos, a, b):
+        return ExprAdd(pos, a, b)
+
+    def visit_sub(self, pos, a, b):
+        return ExprSub(pos, a, b)
+
+    def visit_mul(self, pos, a, b):
+        return ExprMul(pos, a, b)
+
+    def visit_div(self, pos, a, b):
+        return ExprDiv(pos, a, b)
+
+    def visit_pow(self, pos, a, b):
+        return ExprPow(pos, a, b)
 
     ### STRING ###
 

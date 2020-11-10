@@ -73,6 +73,33 @@ class StorageTest(ParserTest):
         )
 
 
+class ExprTest(ParserTest):
+    def test_negate(self):
+        result = self.parse('-42', 'negate')
+        self.assertEqual(result, ExprNegate(Pos(0, 3),
+            ExprValue(Pos(1, 3), 42),
+        ))
+        self.assertEqual(result.eval(None), -42)
+
+    def test_add(self):
+        result = self.parse('3 + 4', 'add')
+        self.assertEqual(result, ExprAdd(Pos(0, 5),
+            ExprValue(Pos(0, 1), 3),
+            ExprValue(Pos(4, 5), 4),
+        ))
+        self.assertEqual(result.eval(None), 7)
+
+
+    def test_label(self):
+        result = self.parse('2 * foo', 'mul')
+        self.assertEqual(result, ExprMul(Pos(0, 7),
+            ExprValue(Pos(0, 1), 2),
+            ExprName(Pos(4, 7), 'foo'),
+        ))
+        ctx = ExprContext({'foo': 7})
+        self.assertEqual(result.eval(ctx), 14)
+
+
 class StringTest(ParserTest):
     def test_parse_escapechar(self):
         result = self.parse(r'"\n"', 'string')

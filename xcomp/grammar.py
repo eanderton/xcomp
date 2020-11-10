@@ -1,7 +1,8 @@
 
 grammar = r"""
 goal            = (macro / def / core_syntax)*
-core_syntax     = comment / byte_storage / word_storage / segment / oper / _
+core_syntax     = comment / byte_storage / word_storage / segment /
+                  label / oper / _
 
 comment         = ~r";\s*.*(?=\n|$)"
 
@@ -19,14 +20,18 @@ macro           = ".macro" _ macro_params _ macro_body _ ".endmacro"
 macro_params    = ident _ (comma _ macro_params _)?
 macro_body      = core_syntax*
 
+label           = ident colon
+
 expr8           = expr
 expr16          = expr
 
 # PEMDAS
-expr            = sub / add / negate / term
+expr            = sub / add / negate / lobyte / hibyte / term
 negate          = minus _ term
+lobyte          = lessthan _ term
+hibyte          = morethan _ term
 add             = term _ plus _ expr
-sub             = term _ plus _ expr
+sub             = term _ sub _ expr
 
 term            = div / mul / exp
 mul             = exp _ asterisk _ exp
