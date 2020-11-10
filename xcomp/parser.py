@@ -2,7 +2,7 @@ from itertools import chain
 from parsimonious.grammar import Grammar, TokenGrammar
 from xcomp.model import *
 from xcomp.grammar import grammar as xcomp_grammar
-from xcomp.flat_ast import ReduceParser, Token
+from xcomp.reduce_parser import ReduceParser, Token
 from xcomp.cpu6502 import grammar as cpu6502_grammar
 from xcomp.cpu6502 import Cpu6502Visitor
 
@@ -38,7 +38,7 @@ class Parser(ReduceParser, Cpu6502Visitor):
 
     def visit_macro_params(self, pos, param, params=None):
         rest = params.names if params else []
-        return Params(pos, [param.value] + rest) #x.value for x in params])
+        return Params(pos, [param.value] + rest)
 
     def visit_macro_body(self, pos, *body):
         return Fragment(pos, body)

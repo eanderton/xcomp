@@ -48,7 +48,7 @@ class ReduceParser(object):
         Creates a new parser around the provided arguments.
 
         The grammar may define a special rule called '__ignored'.  This
-         specifies a set of production names that are to be ignored
+        specifies a set of production names that are to be ignored
         in the output tokens.  This is useful for stipping out whitespace
         productions, comments, and other "noisy" filler that otherwise
         makes it hard to process the AST.

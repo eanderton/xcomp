@@ -2,7 +2,7 @@ from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
 from enum import Enum, auto
-from xcomp.flat_ast import Pos
+from xcomp.reduce_parser import Pos
 
 # TODO: flesh this out with search paths
 class FileLoader(object):

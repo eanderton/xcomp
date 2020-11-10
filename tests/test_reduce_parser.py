@@ -1,5 +1,5 @@
 import unittest
-from xcomp.flat_ast import *
+from xcomp.reduce_parser import *
 
 
 unittest.TestCase.maxDiff = True
