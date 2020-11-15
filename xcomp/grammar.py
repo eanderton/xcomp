@@ -2,7 +2,7 @@
 grammar = r"""
 goal            = (macro / def / core_syntax)*
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  label / oper / _
+                  label / oper / macro_call / _
 
 comment         = ~r";\s*.*(?=\n|$)"
 
@@ -19,6 +19,9 @@ def             = ".def" _ ident _ expr
 macro           = ".macro" _ macro_params _ macro_body _ ".endmacro"
 macro_params    = ident _ (comma _ macro_params _)?
 macro_body      = core_syntax*
+
+macro_call      = ident _ macro_args?
+macro_args      = expr _ (comma _ expr _)?
 
 label           = ident colon
 
@@ -37,15 +40,16 @@ term            = div / mul / exp
 mul             = exp _ asterisk _ exp
 div             = exp _ slash _ exp
 
-exp = pow / fact
-pow = fact carrot fact
-fact = ident / string / number / group_expr
+exp             = pow / fact
+pow             = fact carrot fact
+fact            = ident / string / number / group_expr
 
-group_expr = lparen _ expr _ rparen
+group_expr      = lparen _ expr _ rparen
 
-string          = quote (escapechar / stringchar)* quote
-stringchar      = ~r'[^\"]+'
-escapechar      = "\\" any
+string          = quote ((backslash escape_char) / stringchar)* endquote
+endquote        = "\""
+stringchar      = ~r'[^\\"]+'
+escape_char     = 'r' / 'n' / 't' / 'v' / '"' / '\\'
 
 number          =  base2 / base16 / base10
 base2           = "%" ~r"[01]{1,16}"
@@ -54,6 +58,7 @@ base10          = ~r"(\d+)"
 
 ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
 
+backslash       = "\\"
 quote           = "\""
 lparen          = "("
 rparen          = ")"
@@ -71,11 +76,12 @@ colon           = ":"
 asterisk        = "*"
 
 any             = ~r"."
-_              = ~r"\s*"
+_               = ~r"\s*"
 
-__ignored = "comment" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
-        "plus" / "minus" /
-        "slash" / "carrot" / "pipe" / "ampersand" / "comma" / "hash" / "lessthan" /
-        "morehtan" / "colon" / "asterisk" / "_"
+__ignored       = "comment" / "endquote" /
+                "backslash" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
+                "plus" / "minus" / "slash" / "carrot" / "pipe" / "ampersand" /
+                "comma" / "hash" / "lessthan" / "morehtan" / "colon" / "asterisk" /
+                "_"
 """
 

@@ -1,6 +1,7 @@
 import unittest
 from parsimonious.grammar import Grammar
 from xcomp.parser import *
+from xcomp.reduce_parser import ParseError
 from xcomp.model import *
 from pragma_utils import selfish
 
@@ -17,6 +18,7 @@ class TestExprContext(ExprContext):
 
 class ParserTest(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = None
         self.parser = Parser()
         self.ctx = TestExprContext()
 
@@ -104,13 +106,20 @@ class StringTest(ParserTest):
     def test_parse_escapechar(self):
         result = self.parse(r'"\n"', 'string')
         self.assertEqual(result.value, "\n")
-        with self.assertRaisesRegex(ParseException,
-                r"Invalid escape sequence '\\x'"):
+
+    def test_parse_escape_error(self):
+        with self.assertRaisesRegex(ParseError,
+                r"<internal> \(1, 3\): Invalid escape sequence: '\\x'"):
             self.parse(r'"\x"', 'string')
 
     def test_parse_string(self):
         result = self.parse('"foobar"', 'string')
         self.assertEqual(result.value, 'foobar')
+
+    def test_parse_string_error(self):
+        with self.assertRaisesRegex(ParseError,
+                r'<internal> \(1, 13\): Expected string end quote \("\)'):
+            self.parse(r'"hello world', 'string')
 
 
 class NumberTest(ParserTest):
@@ -135,7 +144,7 @@ class MacroTest(ParserTest):
         )
         result = self.parse('foo, bar, baz', 'macro_params')
         self.assertEqual(result,
-            Params(Pos(0, 13, '<internal>'), ['foo', 'bar', 'baz']),
+            Params(Pos(0, 13), ['foo', 'bar', 'baz']),
         )
 
     def test_macro(self):
@@ -152,17 +161,39 @@ class MacroTest(ParserTest):
         self.assertEqual(len(result.body), 1)
         self.assertEqual(result.body[0].op.name, 'nop')
 
+    def test_macro_call(self):
+        result = self.parse('foo', 'macro_call')
+        self.assertEqual(result,
+            MacroCall(Pos(0, 3), 'foo', Args(Pos(3, 3)))
+        )
+        result = self.parse('foo $EA', 'macro_call')
+        self.assertEqual(result,
+            MacroCall(Pos(0, 7), 'foo', Args(Pos(4, 7), [
+                ExprValue(Pos(4, 7), 0xEA),
+            ]))
+        )
 
-class CompositeTest(unittest.TestCase):
-    pass
+    def test_macro_error(self):
+        with self.assertRaisesRegex(Exception,
+                r"<internal> \(1, 7\): expected macro params"):
+            result = self.parse('.macro', 'macro')
 
-test_program = """
-; hello world
-.def foo 0x1234
-.macro foo
-    nop
-.endmacro
-nop
-"""
+
+class CompositeTest(ParserTest):
+    def __test_program(self):
+        result = self.parse("""
+            ; hello world
+            .def foo 0x1234
+            .macro foobar
+                nop
+            .endmacro
+            .text 0x8000
+            start:
+                lda #$80
+                lda <foo
+                nop
+                foobar
+            """, 'goal')
+        self.assertTrue(False)
 
 

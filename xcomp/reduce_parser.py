@@ -3,6 +3,7 @@ from typing import *
 from collections.abc import Iterable
 from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
+import parsimonious.exceptions as exceptions
 import parsimonious.expressions as expressions
 
 
@@ -16,7 +17,7 @@ class Pos(object):
     def fromNode(self, node: Node, context=None):
         return Pos(node.start, node.end, context or '<internal>')
 
-    def __str__(self):
+    def __repr__(self):
         return f'{self.context}({self.start}:{self.end})'
 
 
@@ -40,6 +41,19 @@ class Token(object):
         return self.full_text[self.pos.start:self.pos.end]
 
 
+class ParseError(Exception):
+    def __init__(self, line, column, context, msg):
+        super().__init__(f'{context} ({line}, {column}): {msg}')
+
+    @classmethod
+    def fromPos(self, pos, text, msg):
+        line = text.count('\n', 0, pos.start) + 1
+        try:
+            column = pos.start - text.rindex('\n', 0, pos.start)
+        except ValueError:
+            column = pos.start + 1
+        return ParseError(line, column, pos.context, msg)
+
 class ReduceParser(object):
     debug = True
 
@@ -57,6 +71,16 @@ class ReduceParser(object):
         self.grammar = Grammar(grammar_ebnf)
         self.grammar.unwrapped_exceptions = unwrapped_exceptions or []
 
+    def error(self, line, column, context, msg):
+        ''' Raises an exeption around the provided arguments. '''
+        raise ParseError(line, column, context, msg)
+
+    def error_generic(self, e):
+        ''' Generic hook for handling parsing errors. '''
+        name = e.expr.name if e.expr.name else str(e.expr)
+        name = name.replace('_', ' ')
+        return f'expected {name} expression'
+
     def parse(self, text, pos=0, context=None, rule=None):
         '''
         Parses a grammar and returns an token tuple.
@@ -67,7 +91,13 @@ class ReduceParser(object):
 
         self.context = context or '<internal>'
         parser = self.grammar if not rule else self.grammar[rule]
-        return self.visit(parser.parse(text, pos))
+
+        try:
+            return self.visit(parser.parse(text, pos))
+        except exceptions.ParseError as e:
+            name = e.expr.name if e.expr.name else str(e.expr)
+            fn = getattr(self, f'error_{name}', self.error_generic)
+            self.error(e.line(), e.column(), self.context, fn(e))
 
     def is_ignored_expr(self, name):
         '''

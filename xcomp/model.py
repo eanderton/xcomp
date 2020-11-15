@@ -173,7 +173,7 @@ class Fragment(object):
 @attrs(auto_attribs=True)
 class Macro(object):
     pos: Pos
-    name: str = None
+    name: str
     params: List[str] = Factory(list)
     body: List[Any] = Factory(list)
 
@@ -185,6 +185,18 @@ class Macro(object):
             name = self.params[name]
         return f'@{id(self)}_{name}'
 
+
+@attrs(auto_attribs=True)
+class MacroCall(object):
+    pos: Pos
+    name: str
+    args: List[Expr] = Factory(list)
+
+
+@attrs(auto_attribs=True)
+class Args(object):
+    pos: Pos
+    values: List[Expr] = Factory(list)
 
 class AddressMode(Enum):
     accumulator = auto()

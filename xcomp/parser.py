@@ -7,17 +7,10 @@ from xcomp.cpu6502 import grammar as cpu6502_grammar
 from xcomp.cpu6502 import Cpu6502Visitor
 
 
-class ParseException(Exception):
-    def __init__(self, pos, *args, **kwargs):
-        self.pos = pos
-        super().__init__(*args, **kwargs)
-
-
 class Parser(ReduceParser, Cpu6502Visitor):
 
     def __init__(self):
-        super().__init__(grammar_ebnf=xcomp_grammar + cpu6502_grammar,
-                unwrapped_exceptions=[ParseException])
+        super().__init__(grammar_ebnf=xcomp_grammar + cpu6502_grammar)
 
     #def visit_goal(self, node, children):
     #    return Program(...)
@@ -30,6 +23,8 @@ class Parser(ReduceParser, Cpu6502Visitor):
 
     def visit_def(self, pos, start, name, expr):
         return Macro(pos, name.value, body=[expr])
+
+    ### MACRO ###
 
     def visit_macro(self, pos, start, params, fragment, end):
         name, *params = tuple(params.names)
@@ -45,6 +40,14 @@ class Parser(ReduceParser, Cpu6502Visitor):
 
     def visit_label(self, pos, name):
         return Label(pos, name)
+
+    def visit_macro_call(self, pos, name, args=None):
+        args = args or Args(Pos(pos.end, pos.end, pos.context))
+        return MacroCall(pos, name.value, args)
+
+    def visit_macro_args(self, pos, argument, args=None):
+        rest = args.values if args else []
+        return Args(pos, [argument] + rest)
 
     ### STORAGE ###
 
@@ -93,18 +96,22 @@ class Parser(ReduceParser, Cpu6502Visitor):
     def visit_stringchar(self, pos, lit):
         return lit.text
 
-    def visit_escapechar(self, pos, _, lit):
-        value = {
+    def error_endquote(self, pos):
+        return "Expected string end quote (\")"
+
+    def visit_escape_char(self, pos, lit):
+        return {
             'r': '\r',
             'n': '\n',
             't': '\t',
             'v': '\v',
             '"': '"',
             '\\': '\\',
-        }.get(lit.text, None)
-        if value == None:
-            raise ParseException(pos, f"Invalid escape sequence '\\{lit.text}'")
-        return value
+        }[lit.text]
+
+    def error_escape_char(self, e):
+        value = e.text[e.pos:e.pos+1]
+        return f"Invalid escape sequence: '\\{value}'"
 
     ### NUMBER ###
 
