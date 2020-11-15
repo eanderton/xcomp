@@ -12,9 +12,6 @@ class Parser(ReduceParser, Cpu6502Visitor):
     def __init__(self):
         super().__init__(grammar_ebnf=xcomp_grammar + cpu6502_grammar)
 
-    #def visit_goal(self, node, children):
-    #    return Program(...)
-
     def visit_segment(self, pos, name, addr=None):
         return Segment(pos, name.text[1:], addr)
 

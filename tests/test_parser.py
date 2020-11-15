@@ -180,7 +180,7 @@ class MacroTest(ParserTest):
 
 
 class CompositeTest(ParserTest):
-    def __test_program(self):
+    def test_program(self):
         result = self.parse("""
             ; hello world
             .def foo 0x1234
@@ -194,6 +194,6 @@ class CompositeTest(ParserTest):
                 nop
                 foobar
             """, 'goal')
-        self.assertTrue(False)
+        self.assertEqual(result, False)
 
 
