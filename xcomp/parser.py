@@ -12,17 +12,23 @@ core_syntax     = comment / byte_storage / word_storage / segment /
 
 comment         = ~r";\s*.*(?=\n|$)"
 
-byte_storage    = ".byte" _ expr _ (comma _ expr _)*
-word_storage    = ".word" _ expr _ (comma _ expr _)*
+byte_storage    = byte_tok _ expr _ (comma _ expr _)*
+byte_tok        = ".byte"
+word_storage    = word_tok _ expr _ (comma _ expr _)*
+word_tok        = ".word"
 
-segment         = segment_name _ number?
-segment_name    = ".zero" / ".text" / ".data" / ".bss"
+segment         = period segment_name _ number?
+segment_name    = "zero" / "text" / "data" / "bss"
 
-include         = ".include" _ string
+include         = include_tok _ string
+include_tok     = ".include"
 
-def             = ".def" _ ident _ expr
+def             = def_tok _ ident _ expr
+def_tok         = ".def"
 
-macro           = ".macro" _ macro_params _ macro_body _ ".endmacro"
+macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
+macro_tok       = ".macro"
+endmacro_tok    = ".endmacro"
 macro_params    = ident _ (comma _ macro_params _)?
 macro_body      = core_syntax*
 
@@ -80,15 +86,19 @@ lessthan        = "<"
 morethan        = ">"
 colon           = ":"
 asterisk        = "*"
+period          = "."
 
 any             = ~r"."
 _               = ~r"\s*"
 
-__ignored       = "comment" / "endquote" /
-                "backslash" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
-                "plus" / "minus" / "slash" / "carrot" / "pipe" / "ampersand" /
-                "comma" / "hash" / "lessthan" / "morehtan" / "colon" / "asterisk" /
-                "_"
+__ignored       = "byte_tok" / "word_tok" /
+                  "comment" / "endquote" /
+                  "include_tok" / "def_tok" /
+                  "macro_tok" / "endmacro_tok" /
+                  "backslash" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
+                  "plus" / "minus" / "slash" / "carrot" / "pipe" / "ampersand" /
+                  "comma" / "hash" / "lessthan" / "morehtan" / "colon" / "asterisk" /
+                  "period" / "_"
 """
 
 
@@ -98,19 +108,17 @@ class Parser(ReduceParser):
         super().__init__(grammar_ebnf=grammar)
 
     def visit_segment(self, pos, name, addr=None):
-        return Segment(pos, name.text[1:], addr)
+        return Segment(pos, name.text, addr)
 
-    def visit_include(self, pos, _, filename):
-        return Include(pos, filename)
+    visit_include = Include
 
-    def visit_def(self, pos, start, name, expr):
+    def visit_def(self, pos, name, expr):
         return Define(pos, name.value, expr)
 
     ### MACRO ###
 
-    def visit_macro(self, pos, start, params, fragment, end):
+    def visit_macro(self, pos, params, fragment):
         name, *params = tuple(params.names)
-        print(name, params)
         return Macro(pos, name, params, fragment.body)
 
     def visit_macro_params(self, pos, param, params=None):
@@ -133,47 +141,27 @@ class Parser(ReduceParser):
 
     ### STORAGE ###
 
-    def visit_byte_storage(self, pos, start, *exprs):
+    def visit_byte_storage(self, pos, *exprs):
         return Storage(pos, 8, exprs)
 
-    def visit_word_storage(self, pos, start, *exprs):
+    def visit_word_storage(self, pos, *exprs):
         return Storage(pos, 16, exprs)
 
     ### EXPRESSIONS ###
-    def visit_expr8(self, pos, expr):
-        return Expr8(pos, expr)
 
-    def visit_expr16(self, pos, expr):
-        return Expr16(pos, expr)
-
-    def visit_negate(self, pos, a):
-        return ExprNegate(pos, a)
-
-    def visit_lobyte(self, pos, a):
-        return ExprLobyte(pos, a)
-
-    def visit_hibyte(self, pos, a):
-        return ExprHibyte(pos, a)
-
-    def visit_add(self, pos, a, b):
-        return ExprAdd(pos, a, b)
-
-    def visit_sub(self, pos, a, b):
-        return ExprSub(pos, a, b)
-
-    def visit_mul(self, pos, a, b):
-        return ExprMul(pos, a, b)
-
-    def visit_div(self, pos, a, b):
-        return ExprDiv(pos, a, b)
-
-    def visit_pow(self, pos, a, b):
-        return ExprPow(pos, a, b)
+    visit_expr8 = Expr8
+    visit_expr16 = Expr16
+    visit_negate = ExprNegate
+    visit_lobyte = ExprLobyte
+    visit_hibyte = ExprHibyte
+    visit_add = ExprAdd
+    visit_sub = ExprSub
+    visit_div = ExprDiv
+    visit_mul = ExprMul
 
     ### STRING ###
 
-    def visit_string(self, pos, *chars):
-        return String(pos, ''.join(chars))
+    visit_string = String
 
     def visit_stringchar(self, pos, lit):
         return lit.text

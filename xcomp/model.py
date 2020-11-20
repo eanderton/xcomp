@@ -31,10 +31,10 @@ class FileContextManager(AbstractContextManager):
         return filename in self.files
 
 
-@attrs(auto_attribs=True)
 class String(object):
-    pos: Pos
-    value: str
+    def __init__(self, pos, *chars):
+        self.pos = pos
+        self.value = ''.join(chars)
 
 
 @attrs(auto_attribs=True)
@@ -275,7 +275,6 @@ class Macro(object):
             yield x
 
 
-
 @attrs(auto_attribs=True)
 class Args(object):
     pos: Pos
@@ -287,7 +286,6 @@ class MacroCall(object):
     pos: Pos
     name: str
     args: Args
-
 
 
 @attrs(auto_attribs=True)
