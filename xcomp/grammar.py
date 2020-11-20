@@ -1,4 +1,6 @@
 
+from xcomp.cpu6502 import *
+
 grammar = r"""
 goal            = (macro / def / core_syntax)*
 core_syntax     = comment / byte_storage / word_storage / segment /
@@ -85,3 +87,18 @@ __ignored       = "comment" / "endquote" /
                 "_"
 """
 
+
+# flag for import-time initializaiton
+__setup_complete = False
+
+# amend the module by dynamically building the grammar and parser base class
+if not __setup_complete:
+    op_names = []
+    grammar_parts = []
+    for op in opcode_table:
+        expr = f'op_{op.name}_{op.mode.name}'
+        seq = ' _ '.join([f'"{op.name}"'] + addressmode_params[op.mode])
+        op_names.append(expr)
+        grammar_parts.append(f'{expr} = {seq}')
+    grammar_parts.append('oper = ' + ' / '.join(op_names))
+    grammar = '\n'.join(grammar_parts)

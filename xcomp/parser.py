@@ -1,16 +1,101 @@
 from itertools import chain
 from parsimonious.grammar import Grammar, TokenGrammar
 from xcomp.model import *
-from xcomp.grammar import grammar as xcomp_grammar
 from xcomp.reduce_parser import ReduceParser, Token
-from xcomp.cpu6502 import grammar as cpu6502_grammar
-from xcomp.cpu6502 import Cpu6502Visitor
+from xcomp.cpu6502 import *
 
 
-class Parser(ReduceParser, Cpu6502Visitor):
+grammar = r"""
+goal            = (macro / def / core_syntax)*
+core_syntax     = comment / byte_storage / word_storage / segment /
+                  label / oper / macro_call / _
+
+comment         = ~r";\s*.*(?=\n|$)"
+
+byte_storage    = ".byte" _ expr _ (comma _ expr _)*
+word_storage    = ".word" _ expr _ (comma _ expr _)*
+
+segment         = segment_name _ number?
+segment_name    = ".zero" / ".text" / ".data" / ".bss"
+
+include         = ".include" _ string
+
+def             = ".def" _ ident _ expr
+
+macro           = ".macro" _ macro_params _ macro_body _ ".endmacro"
+macro_params    = ident _ (comma _ macro_params _)?
+macro_body      = core_syntax*
+
+macro_call      = ident _ macro_args?
+macro_args      = expr _ (comma _ expr _)?
+
+label           = ident colon
+
+expr8           = expr
+expr16          = expr
+
+# PEMDAS
+expr            = sub / add / negate / lobyte / hibyte / term
+negate          = minus _ term
+lobyte          = lessthan _ term
+hibyte          = morethan _ term
+add             = term _ plus _ expr
+sub             = term _ sub _ expr
+
+term            = div / mul / exp
+mul             = exp _ asterisk _ exp
+div             = exp _ slash _ exp
+
+exp             = pow / fact
+pow             = fact carrot fact
+fact            = ident / string / number / group_expr
+
+group_expr      = lparen _ expr _ rparen
+
+string          = quote ((backslash escape_char) / stringchar)* endquote
+endquote        = "\""
+stringchar      = ~r'[^\\"]+'
+escape_char     = 'r' / 'n' / 't' / 'v' / '"' / '\\'
+
+number          =  base2 / base16 / base10
+base2           = "%" ~r"[01]{1,16}"
+base16          = ~r"\$|0x" ~r"[0-9a-fA-F]{1,4}"
+base10          = ~r"(\d+)"
+
+ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
+
+backslash       = "\\"
+quote           = "\""
+lparen          = "("
+rparen          = ")"
+plus            = "+"
+minus           = "-"
+slash           = "/"
+carrot          = "^"
+pipe            = "|"
+ampersand       = "&"
+comma           = ","
+hash            = "#"
+lessthan        = "<"
+morethan        = ">"
+colon           = ":"
+asterisk        = "*"
+
+any             = ~r"."
+_               = ~r"\s*"
+
+__ignored       = "comment" / "endquote" /
+                "backslash" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
+                "plus" / "minus" / "slash" / "carrot" / "pipe" / "ampersand" /
+                "comma" / "hash" / "lessthan" / "morehtan" / "colon" / "asterisk" /
+                "_"
+"""
+
+
+class Parser(ReduceParser):
 
     def __init__(self):
-        super().__init__(grammar_ebnf=xcomp_grammar + cpu6502_grammar)
+        super().__init__(grammar_ebnf=grammar)
 
     def visit_segment(self, pos, name, addr=None):
         return Segment(pos, name.text[1:], addr)
@@ -125,3 +210,33 @@ class Parser(ReduceParser, Cpu6502Visitor):
 
     def visit_ident(self, pos, lit):
         return ExprName(pos, lit.text)
+
+    ### OP ###
+
+    def _visit_no_args(self, op, pos, *args):
+        return Op(pos, op)
+
+    def _visit_one_arg(self, op, pos, opname, arg):
+        return Op(pos, op, arg)
+
+
+# flag for import-time initializaiton
+__setup_complete = False
+
+# amend the module by dynamically building the grammar and parser base class
+if not __setup_complete:
+    op_names = []
+    grammar_parts = []
+    for op in opcode_table:
+        expr = f'op_{op.name}_{op.mode.name}'
+        seq = ' _ '.join([f'"{op.name}"'] + addressmode_params[op.mode])
+        op_names.append(expr)
+        grammar_parts.append(f'{expr} = {seq}')
+        if addressmode_args[op.mode]:
+            visit_name = '_visit_one_arg'
+        else:
+            visit_name = '_visit_no_args'
+        fn = partialmethod(getattr(Parser, visit_name), op)
+        setattr(Parser, f'visit_{expr}', fn)
+    grammar_parts.append('oper = ' + ' / '.join(op_names))
+    grammar += '\n'.join(grammar_parts)

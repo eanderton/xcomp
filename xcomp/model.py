@@ -1,9 +1,8 @@
 from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
-from enum import Enum, auto
 from xcomp.reduce_parser import Pos
-
+from xcomp.cpu6502 import OpCode, opcode_templates
 
 class AbstractContextManager(ABC):
     @abstractmethod
@@ -235,6 +234,17 @@ class Define(object):
     def __str__(self):
         return f'.define {self.name} {self.expr}'
 
+
+class Scope(object):
+    def __str__(self):
+        return '.scope'
+
+
+class EndScope(object):
+    def __str__(self):
+        return '.endscope'
+
+
 @attrs(auto_attribs=True)
 class Fragment(object):
     pos: Pos
@@ -278,47 +288,6 @@ class MacroCall(object):
     name: str
     args: Args
 
-
-
-class AddressMode(Enum):
-    accumulator = auto()
-    absolute = auto()
-    absolute_x = auto()
-    absolute_y = auto()
-    immediate = auto()
-    implied = auto()
-    indirect = auto()
-    indirect_x = auto()
-    indirect_y = auto()
-    relative = auto()
-    zeropage = auto()
-    zeropage_x = auto()
-    zeropage_y = auto()
-    unknown = auto()
-
-
-opcode_templates = {
-    AddressMode.accumulator: 'A',
-    AddressMode.absolute:    '{arg16}',
-    AddressMode.absolute_x:  '{arg16}, X',
-    AddressMode.absolute_y:  '{arg16}, Y',
-    AddressMode.immediate:   '#{arg8}',
-    AddressMode.implied:     '',
-    AddressMode.indirect:    '({arg16})',
-    AddressMode.indirect_x:  '({arg8}, X)',
-    AddressMode.indirect_y:  '({arg8}), Y',
-    AddressMode.relative:    '{arg8}',
-    AddressMode.zeropage:    '{arg8}',
-    AddressMode.zeropage_x:  '{arg8}, X',
-    AddressMode.zeropage_y:  '{arg8}, Y',
-}
-
-
-@attrs(auto_attribs=True)
-class OpCode(object):
-    name: str
-    mode: AddressMode
-    value: int
 
 
 @attrs(auto_attribs=True)

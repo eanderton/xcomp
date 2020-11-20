@@ -1,5 +1,6 @@
 import unittest
 from inspect import cleandoc
+from xcomp.compiler import PreProcessor
 from xcomp.compiler import Compiler
 from xcomp.compiler import CompilationError
 from xcomp.parser import Parser
@@ -9,12 +10,11 @@ from xcomp.model import *
 
 class CompilerTest(unittest.TestCase):
     def setUp(self):
-        self.maxDiff = None
-        self.parser = Parser()
-        self.compiler = Compiler(FileContextManager())
+        self.ctx_manager = FileContextManager()
+        self.processor = PreProcessor(self.ctx_manager)
 
     def set_file(self, name, text):
-        self.compiler.ctx_manager.files[name] = cleandoc(text)
+        self.ctx_manager.files[name] = cleandoc(text)
 
     def assertAstEqual(self, ast, ast_text):
         left = '\n'.join(map(str, ast))
@@ -22,9 +22,8 @@ class CompilerTest(unittest.TestCase):
         self.assertEqual(left, right)
 
 class PreprocessorTest(CompilerTest):
-    def pre_process(self, name):
-        ast = self.compiler._parse(name)
-        return self.compiler._pre_process(ast)
+    def parse(self, name):
+        return self.processor.parse(name)
 
     def test_macro(self):
         self.set_file('foo.asm', """
@@ -38,7 +37,7 @@ class PreprocessorTest(CompilerTest):
                 lda <foo
                 foobar 123
             """)
-        self.assertAstEqual(self.pre_process('foo.asm'), """
+        self.assertAstEqual(self.parse('foo.asm'), """
             .text 32768
             start:
                 lda #128
