@@ -4,11 +4,32 @@ from typing import *
 from enum import Enum, auto
 from xcomp.reduce_parser import Pos
 
-# TODO: flesh this out with search paths
-class FileLoader(object):
-    def __call__(self, path):
-        with open(path) as f:
-            return f.read()
+
+class AbstractContextManager(ABC):
+    @abstractmethod
+    def get_text(self, ctx_name):
+        return None
+
+    @abstractmethod
+    def exists(self, ctx_name):
+        return False
+
+
+@attrs(auto_attribs=True, slots=True)
+class FileContextManager(AbstractContextManager):
+    files: Dict = Factory(dict)
+
+    def get_text(self, filename):
+        # TODO: normalize path
+        # TODO: check for file existence
+
+        if filename not in self.files:
+            with open(filename) as f:
+                self.files[filename] = f.read()
+        return self.files[filename]
+
+    def exists(self, filename):
+        return filename in self.files
 
 
 @attrs(auto_attribs=True)
@@ -26,8 +47,21 @@ class Include(object):
 @attrs(auto_attribs=True)
 class Label(object):
     pos: Pos
+    name: str
     addr: int = 0
     resolved: bool = False
+
+    def __str__(self):
+        return f'{self.name}:'
+
+
+@attrs(auto_attribs=True)
+class ExprContext(object):
+    lookup: Factory(dict)
+
+    @abstractmethod
+    def resolve_name(self, label_name):
+        return self.lookup.get(label_name, None)
 
 
 class Expr(ABC):
@@ -39,14 +73,8 @@ class Expr(ABC):
     def validate(self, ctx):
         return False
 
-
-@attrs(auto_attribs=True)
-class ExprContext(object):
-    lookup: Factory(dict)
-
-    @abstractmethod
-    def resolve_name(self, label_name):
-        return self.lookup.get(label_name, None)
+    def substitute(self, name, value):
+        pass
 
 
 @attrs(auto_attribs=True)
@@ -65,25 +93,40 @@ class Expr8(ExprUnaryOp):
     def oper(self, a):
         return a
 
+    def __str__(self):
+        return f'{self.arg}'
+
 
 class Expr16(ExprUnaryOp):
     def oper(self, a):
         return a
+
+    def __str__(self):
+        return f'{self.arg}'
 
 
 class ExprNegate(ExprUnaryOp):
     def oper(self, a):
         return -a
 
+    def __str__(self):
+        return f'-{self.arg}'
+
 
 class ExprLobyte(ExprUnaryOp):
     def oper(self, a):
-        return -a
+        return a & 0xFF
+
+    def __str__(self):
+        return f'<{self.arg}'
 
 
 class ExprHibyte(ExprUnaryOp):
     def oper(self, a):
-        return -a
+        return (a >> 8) & 0xFF
+
+    def __str__(self):
+        return f'<{self.arg}'
 
 
 @attrs(auto_attribs=True)
@@ -103,30 +146,40 @@ class ExprAdd(ExprBinaryOp):
     def oper(self, a, b):
         return a + b
 
-
-class ExprSub(ExprBinaryOp):
-    def oper(self, a, b):
-        return a - b
+    def __str__(self):
+        return f'({self.left} + {self.right})'
 
 
 class ExprSub(ExprBinaryOp):
     def oper(self, a, b):
         return a - b
+
+    def __str__(self):
+        return f'({self.left} - {self.right})'
 
 
 class ExprMul(ExprBinaryOp):
     def oper(self, a, b):
         return a * b
 
+    def __str__(self):
+        return f'({self.left} * {self.right})'
+
 
 class ExprDiv(ExprBinaryOp):
     def oper(self, a, b):
         return a / b
 
+    def __str__(self):
+        return f'({self.left} / {self.right})'
+
 
 class ExprPow(ExprBinaryOp):
     def oper(self, a, b):
         return a ^ b
+
+    def __str__(self):
+        return f'({self.left} ^ {self.right})'
 
 
 @attrs(auto_attribs=True)
@@ -139,6 +192,9 @@ class ExprValue(Expr):
 
     def validate(self, ctx):
         return True
+
+    def __str__(self):
+        return str(self.value)
 
 
 @attrs(auto_attribs=True)
@@ -157,12 +213,27 @@ class ExprName(Expr):
         value =  ctx.resolve_name(self.value)
         return value is not None
 
+    def __str__(self):
+        return self.value
+
 
 @attrs(auto_attribs=True)
 class Params(object):
     pos: Pos
     names: List[str] = Factory(list)
 
+    def __str__(self):
+        return ', '.join(self.names)
+
+
+@attrs(auto_attribs=True)
+class Define(object):
+    pos: Pos
+    name: str
+    expr: Expr
+
+    def __str__(self):
+        return f'.define {self.name} {self.expr}'
 
 @attrs(auto_attribs=True)
 class Fragment(object):
@@ -174,7 +245,7 @@ class Fragment(object):
 class Macro(object):
     pos: Pos
     name: str
-    params: List[str] = Factory(list)
+    params: Params
     body: List[Any] = Factory(list)
 
     def is_singlet(self):
@@ -185,18 +256,29 @@ class Macro(object):
             name = self.params[name]
         return f'@{id(self)}_{name}'
 
+    def substitute(self, args):
+        ''' Return copy of body with params defined. '''
+        for ii in range(len(args.values)):
+            name = self.params[ii]
+            yield Define(Pos(0, 0), name, args.values[ii])
+        for x in self.body:
+            yield x
 
-@attrs(auto_attribs=True)
-class MacroCall(object):
-    pos: Pos
-    name: str
-    args: List[Expr] = Factory(list)
 
 
 @attrs(auto_attribs=True)
 class Args(object):
     pos: Pos
     values: List[Expr] = Factory(list)
+
+
+@attrs(auto_attribs=True)
+class MacroCall(object):
+    pos: Pos
+    name: str
+    args: Args
+
+
 
 class AddressMode(Enum):
     accumulator = auto()
@@ -215,6 +297,23 @@ class AddressMode(Enum):
     unknown = auto()
 
 
+opcode_templates = {
+    AddressMode.accumulator: 'A',
+    AddressMode.absolute:    '{arg16}',
+    AddressMode.absolute_x:  '{arg16}, X',
+    AddressMode.absolute_y:  '{arg16}, Y',
+    AddressMode.immediate:   '#{arg8}',
+    AddressMode.implied:     '',
+    AddressMode.indirect:    '({arg16})',
+    AddressMode.indirect_x:  '({arg8}, X)',
+    AddressMode.indirect_y:  '({arg8}), Y',
+    AddressMode.relative:    '{arg8}',
+    AddressMode.zeropage:    '{arg8}',
+    AddressMode.zeropage_x:  '{arg8}, X',
+    AddressMode.zeropage_y:  '{arg8}, Y',
+}
+
+
 @attrs(auto_attribs=True)
 class OpCode(object):
     name: str
@@ -226,7 +325,16 @@ class OpCode(object):
 class Op(object):
     pos: Pos
     op: OpCode
-    arg: Any = Factory(list)
+    arg: Expr = None
+
+    def __str__(self):
+        if not self.arg:
+            return f'    {self.op.name}'
+        args = opcode_templates[self.op.mode].format(**{
+            'arg16': str(self.arg),
+            'arg8': str(self.arg),
+        })
+        return f'    {self.op.name} {args}'
 
 
 @attrs(auto_attribs=True)
@@ -235,17 +343,19 @@ class Storage(object):
     width: int
     items: List[int]
 
+    def __str__(self):
+        items = map(str, self.items)
+        if self.width == 8:
+            return '.byte ' + (', '.join(items))
+        return '.word ' + (', '.join(items))
 
 @attrs(auto_attribs=True)
 class Segment(object):
     pos: Pos
     name: str
     start: [int, None]
-    code: List[Any] = Factory(list)
 
-
-@attrs(auto_attribs=True)
-class Program(object):
-    segments: Dict[str, Segment] = Factory(dict)
-    macros: Dict[str, Macro] = Factory(dict)
-    defs: Dict[str, Macro] = Factory(dict)
+    def __str__(self):
+        if self.start is not None:
+            return f'.{self.name} {self.start}'
+        return f'.{self.name}'

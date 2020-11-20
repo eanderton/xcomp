@@ -9,6 +9,14 @@ from xcomp.model import AddressMode as M
 
 
 opcode_table = (
+    OpCode("adc", M.immediate,   0x69),
+    OpCode("adc", M.zeropage,    0x65),
+    OpCode("adc", M.zeropage_x,  0x75),
+    OpCode("adc", M.absolute,    0x6D),
+    OpCode("adc", M.absolute_x,  0x7D),
+    OpCode("adc", M.absolute_y,  0x79),
+    OpCode("adc", M.indirect_x,  0x61),
+    OpCode("adc", M.indirect_y,  0x71),
     OpCode("and", M.immediate,   0x29),
     OpCode("and", M.zeropage,    0x25),
     OpCode("and", M.zeropage_x,  0x35),

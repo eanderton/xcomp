@@ -3,7 +3,6 @@ from parsimonious.grammar import Grammar
 from xcomp.parser import *
 from xcomp.reduce_parser import ParseError
 from xcomp.model import *
-from pragma_utils import selfish
 
 
 class TestExprContext(ExprContext):
@@ -51,7 +50,7 @@ class DefTest(ParserTest):
     def test_def(self):
         result = self.parse('.def foo bar', 'def')
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(result.body[0].value, 'bar')
+        self.assertEqual(result.expr.value, 'bar')
 
 
 
@@ -177,23 +176,5 @@ class MacroTest(ParserTest):
         with self.assertRaisesRegex(Exception,
                 r"<internal> \(1, 7\): expected macro params"):
             result = self.parse('.macro', 'macro')
-
-
-class CompositeTest(ParserTest):
-    def test_program(self):
-        result = self.parse("""
-            ; hello world
-            .def foo 0x1234
-            .macro foobar
-                nop
-            .endmacro
-            .text 0x8000
-            start:
-                lda #$80
-                lda <foo
-                nop
-                foobar
-            """, 'goal')
-        self.assertEqual(result, False)
 
 

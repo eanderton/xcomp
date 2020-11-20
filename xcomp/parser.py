@@ -15,11 +15,11 @@ class Parser(ReduceParser, Cpu6502Visitor):
     def visit_segment(self, pos, name, addr=None):
         return Segment(pos, name.text[1:], addr)
 
-    def visit_include(self, pos, start, filename):
+    def visit_include(self, pos, _, filename):
         return Include(pos, filename)
 
     def visit_def(self, pos, start, name, expr):
-        return Macro(pos, name.value, body=[expr])
+        return Define(pos, name.value, expr)
 
     ### MACRO ###
 
@@ -36,7 +36,7 @@ class Parser(ReduceParser, Cpu6502Visitor):
         return Fragment(pos, body)
 
     def visit_label(self, pos, name):
-        return Label(pos, name)
+        return Label(pos, name.value)
 
     def visit_macro_call(self, pos, name, args=None):
         args = args or Args(Pos(pos.end, pos.end, pos.context))

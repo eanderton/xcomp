@@ -54,6 +54,7 @@ class ParseError(Exception):
             column = pos.start + 1
         return ParseError(line, column, pos.context, msg)
 
+
 class ReduceParser(object):
     debug = True
 
