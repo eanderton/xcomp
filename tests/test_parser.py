@@ -71,7 +71,7 @@ class LabelTest(ParserTest):
 class IncludeTest(ParserTest):
     def test_include(self):
         result = self.parse('.include "foobar.asm"', 'include')
-        self.assertEqual(result.filename.value, 'foobar.asm')
+        self.assertEqual(result.filename, 'foobar.asm')
 
 
 class DefTest(ParserTest):
@@ -125,7 +125,7 @@ class ExprTest(ParserTest):
         ))
         result = self.parse('<$33', 'expr')
         self.assertEqual(result[0], ExprLobyte(Pos(0, 4),
-            ExprValue(Pos(1, 4), 0x33),
+            ExprValue(Pos(1, 4), 0x33, 16),
         ))
 
     def test_mul(self):
@@ -205,7 +205,7 @@ class MacroTest(ParserTest):
         result = self.parse('foo $EA', 'macro_call')
         self.assertEqual(result,
             MacroCall(Pos(0, 7), 'foo', Args(Pos(4, 7), [
-                ExprValue(Pos(4, 7), 0xEA),
+                ExprValue(Pos(4, 7), 0xEA, 16),
             ]))
         )
 

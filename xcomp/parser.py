@@ -6,7 +6,7 @@ from xcomp.cpu6502 import *
 
 
 grammar = r"""
-goal            = (macro / def / core_syntax)*
+goal            = (include / macro / def / core_syntax)*
 
 # TODO: why does adding ws before label fix this?
 core_syntax     = comment / byte_storage / word_storage / segment /
@@ -67,12 +67,14 @@ stringchar      = ~r'[^\\"]+'
 escape_char     = 'r' / 'n' / 't' / 'v' / '"' / '\\'
 
 number          =  base2 / base16 / base10
-base2           = "%" ~r"[01]{1,16}"
-base16          = ~r"\$|0x" ~r"[0-9a-fA-F]{1,4}"
+base2           = percent_tok ~r"[01]{1,16}"
+base16          = hex_tok ~r"[0-9a-fA-F]{1,4}"
 base10          = ~r"(\d+)"
 
 ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
 
+percent_tok     = "%"
+hex_tok         = ~r"\$|0x"
 backslash       = "\\"
 quote           = "\""
 lparen          = "("
@@ -110,7 +112,8 @@ class Parser(ReduceParser):
     def visit_segment(self, pos, name, addr=None):
         return Segment(pos, name.text, addr)
 
-    visit_include = Include
+    def visit_include(self, pos, filename):
+        return Include(pos, filename.value)
 
     def visit_def(self, pos, name, expr):
         return Define(pos, name.value, expr)
@@ -185,14 +188,14 @@ class Parser(ReduceParser):
 
     ### NUMBER ###
 
-    def visit_base2(self, pos, start, lit):
-        return ExprValue(pos, int(lit.text, base=2))
+    def visit_base2(self, pos, lit):
+        return ExprValue(pos, int(lit.text, base=2), 2)
 
-    def visit_base16(self, pos, start, lit):
-        return ExprValue(pos, int(lit.text, base=16))
+    def visit_base16(self, pos, lit):
+        return ExprValue(pos, int(lit.text, base=16), 16)
 
     def visit_base10(self, pos, lit):
-        return ExprValue(pos, int(lit.text, base=10))
+        return ExprValue(pos, int(lit.text, base=10), 10)
 
     ### EXPR ###
 
@@ -201,12 +204,10 @@ class Parser(ReduceParser):
 
     ### OP ###
 
-    def _visit_no_args(self, op, pos, *args):
-        print('visit_no_args', op, pos)
+    def _visit_no_args(self, op, pos):
         return Op(pos, op)
 
-    def _visit_one_arg(self, op, pos, arg, *args):
-        print('visit_one_arg', op, pos, arg)
+    def _visit_one_arg(self, op, pos, arg):
         return Op(pos, op, arg)
 
 # flag for import-time initializaiton

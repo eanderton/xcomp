@@ -8,10 +8,12 @@ from xcomp.model import *
 
 
 
-class CompilerTest(unittest.TestCase):
+class TestBase(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = None
         self.ctx_manager = FileContextManager()
         self.processor = PreProcessor(self.ctx_manager)
+        self.compiler = Compiler()
 
     def set_file(self, name, text):
         self.ctx_manager.files[name] = cleandoc(text)
@@ -21,10 +23,14 @@ class CompilerTest(unittest.TestCase):
         right = cleandoc(ast_text)
         self.assertEqual(left, right)
 
-class PreprocessorTest(CompilerTest):
     def parse(self, name):
         return self.processor.parse(name)
 
+    def compile(self, name):
+        return self.compiler.compiler(self.parse(name))
+
+
+class PreprocessorTest(TestBase):
     def test_macro(self):
         self.set_file('foo.asm', """
             .macro foobar, value
@@ -38,9 +44,9 @@ class PreprocessorTest(CompilerTest):
                 foobar 123
             """)
         self.assertAstEqual(self.parse('foo.asm'), """
-            .text 32768
+            .text $8000
             start:
-                lda #128
+                lda #$80
                 lda <foo
             .scope
             .define value 123
@@ -49,4 +55,24 @@ class PreprocessorTest(CompilerTest):
             .endscope
             """)
 
+    def test_include(self):
+        self.set_file('root.asm',"""
+        .text
+        .include "test.asm"
+        nop
+        """)
+        self.set_file('test.asm',"""
+        lda $40
+        adc #$80
+        """)
+        self.assertAstEqual(self.parse('root.asm'), """
+        .text
+            lda $40
+            adc #$80
+            nop
+        """)
 
+
+class CompilerTest(TestBase):
+    def test_compile_simple(self):
+        self.assertTrue(True)

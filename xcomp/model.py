@@ -185,6 +185,7 @@ class ExprPow(ExprBinaryOp):
 class ExprValue(Expr):
     pos: Pos
     value: int
+    base: int = 10
 
     def eval(self, ctx):
         return self.value
@@ -193,6 +194,10 @@ class ExprValue(Expr):
         return True
 
     def __str__(self):
+        if self.base == 2:
+            return f'%{self.value:b}'
+        if self.base == 16:
+            return f'${self.value:x}'
         return str(self.value)
 
 

@@ -102,7 +102,7 @@ class PreProcessor(CompilerBase):
 
 
 class Compiler(CompilerBase):
-    def __init__(self, ctx_manager):
+    def __init__(self):
         self.reset()
 
     def reset(self):
@@ -142,13 +142,7 @@ class Compiler(CompilerBase):
                 fixups.append(fixup)
             current.seg.extend(value)
 
-    def compile(self, ctx_name):
-        # parse root file and pre-process
-        ast = self._parse(ctx_name)
-
-        self.current_seg = self.segments['text']
-        ast = list(self._pre_process(ast, macros))
-
+    def compile(self, ast):
         # TODO: evaluation context that contains segments, current segment, and labels
         # TODO: eval() will have to return fixup information
 
