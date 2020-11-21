@@ -130,7 +130,7 @@ class ReduceParser(object):
             return node
 
         if self.debug:
-            print(f'ReduceParser(dbg): [{node.expr_name}] type: {type(node.expr)} text: {node.text}')
+            print(f'ReduceParser(dbg): [{node.expr_name}] type: {type(node.expr)} text: {node.text} children: {len(node.children)}')
         values = []
         if isinstance(node.expr, (expressions.Regex, expressions.Literal)):
             values.append(Token.fromNode(node, context=self.context))
@@ -145,6 +145,8 @@ class ReduceParser(object):
                     else:
                         values.append(n)
         fn = getattr(self, f'visit_{node.expr_name}', None)
+        if self.debug:
+            print(f'ReduceParser(dbg): FN visit_{node.expr_name} == {fn}({values})')
         if fn:
             return fn(Pos.fromNode(node), *values)
         else:

@@ -14,7 +14,6 @@ class TestExprContext(ExprContext):
     def resolve_name(self, label_name):
         return self.names[label_name]
 
-
 class ParserTest(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
@@ -28,6 +27,22 @@ class ParserTest(unittest.TestCase):
         return result
 
 
+class IgnoredTest(ParserTest):
+    def test_ws(self):
+        result = self.parse('', 'goal')
+        self.assertEqual(result, tuple())
+        result = self.parse(' ', 'goal')
+        self.assertEqual(result, tuple())
+        result = self.parse('\n', 'goal')
+        self.assertEqual(result, tuple())
+
+    def test_comment(self):
+        result = self.parse('''
+        ; hello world
+        ''', 'goal')
+        self.assertEqual(result, tuple())
+
+
 class SegmentTest(ParserTest):
     def test_segment(self):
         result = self.parse('.text', 'segment')
@@ -39,6 +54,19 @@ class SegmentTest(ParserTest):
         self.assertEqual(result.name, 'data')
         self.assertEqual(result.start.value, 0x1234)
 
+
+class LabelTest(ParserTest):
+    def test_label(self):
+        result = self.parse('foo:', 'label')
+        self.assertEqual(result.name, 'foo')
+
+        result = self.parse('foo:', 'core_syntax')
+        self.assertEqual(result[0].name, 'foo')
+
+        result = self.parse('''
+        start:
+        ''', 'goal')
+        self.assertEqual(result[0].name, 'start')
 
 class IncludeTest(ParserTest):
     def test_include(self):
@@ -90,8 +118,17 @@ class ExprTest(ParserTest):
         ))
         self.assertEqual(result.eval(None), 7)
 
+    def test_lobyte(self):
+        result = self.parse('<33', 'lobyte')
+        self.assertEqual(result, ExprLobyte(Pos(0, 3),
+            ExprValue(Pos(1, 3), 33),
+        ))
+        result = self.parse('<$33', 'expr')
+        self.assertEqual(result[0], ExprLobyte(Pos(0, 4),
+            ExprValue(Pos(1, 4), 0x33),
+        ))
 
-    def test_label(self):
+    def test_mul(self):
         result = self.parse('2 * foo', 'mul')
         self.assertEqual(result, ExprMul(Pos(0, 7),
             ExprValue(Pos(0, 1), 2),

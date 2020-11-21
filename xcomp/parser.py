@@ -7,8 +7,11 @@ from xcomp.cpu6502 import *
 
 grammar = r"""
 goal            = (macro / def / core_syntax)*
+
+# TODO: why does adding ws before label fix this?
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  label / oper / macro_call / _
+                  (_ label) /
+                  oper / macro_call / _
 
 comment         = ~r";\s*.*(?=\n|$)"
 
@@ -91,14 +94,11 @@ period          = "."
 any             = ~r"."
 _               = ~r"\s*"
 
-__ignored       = "byte_tok" / "word_tok" /
-                  "comment" / "endquote" /
-                  "include_tok" / "def_tok" /
-                  "macro_tok" / "endmacro_tok" /
+__ignored       = "comment" / "endquote" /
                   "backslash" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
                   "plus" / "minus" / "slash" / "carrot" / "pipe" / "ampersand" /
-                  "comma" / "hash" / "lessthan" / "morehtan" / "colon" / "asterisk" /
-                  "period" / "_"
+                  "comma" / "hash" / "lessthan" / "morethan" / "colon" / "asterisk" /
+                  "period" / ~r".*_tok" / "_"
 """
 
 
@@ -202,11 +202,12 @@ class Parser(ReduceParser):
     ### OP ###
 
     def _visit_no_args(self, op, pos, *args):
+        print('visit_no_args', op, pos)
         return Op(pos, op)
 
-    def _visit_one_arg(self, op, pos, opname, arg):
+    def _visit_one_arg(self, op, pos, arg, *args):
+        print('visit_one_arg', op, pos, arg)
         return Op(pos, op, arg)
-
 
 # flag for import-time initializaiton
 __setup_complete = False
@@ -215,9 +216,14 @@ __setup_complete = False
 if not __setup_complete:
     op_names = []
     grammar_parts = []
+    opname_tokens = []
+
+    for name in opcode_xref.keys():
+        grammar_parts.append(f'{name}_tok = "{name}"')
+
     for op in opcode_table:
         expr = f'op_{op.name}_{op.mode.name}'
-        seq = ' _ '.join([f'"{op.name}"'] + addressmode_params[op.mode])
+        seq = ' _ '.join([f'_ {op.name}_tok'] + addressmode_params[op.mode])
         op_names.append(expr)
         grammar_parts.append(f'{expr} = {seq}')
         if addressmode_args[op.mode]:
