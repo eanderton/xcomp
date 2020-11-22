@@ -27,7 +27,7 @@ class TestBase(unittest.TestCase):
         return self.processor.parse(name)
 
     def compile(self, name):
-        return self.compiler.compiler(self.parse(name))
+        return self.compiler.compile(self.parse(name))
 
 
 class PreprocessorTest(TestBase):
@@ -74,5 +74,20 @@ class PreprocessorTest(TestBase):
 
 
 class CompilerTest(TestBase):
+    def assertSegAttrEqual(self, name, attr, value):
+        self.assertEqual(getattr(self.compiler.segments[name], attr), value)
+
+    def assertDataEqual(self, start, end, values):
+        self.assertEqual(self.compiler.data[start:end], bytearray(values))
+
     def test_compile_simple(self):
-        self.assertTrue(True)
+        self.set_file('root.asm', """
+        nop
+        adc #$80
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0800, 0x0803, [
+            0xEA, 0x69, 0x80
+        ])
+        print('{0:x}'.format(self.compiler.seg.offset))
+        self.assertSegAttrEqual('text', 'offset', 0x0803)

@@ -1,5 +1,6 @@
 from attr import attrib, attrs, Factory
 from typing import *
+from itertools import filterfalse
 from functools import singledispatchmethod
 from xcomp.model import *
 from xcomp.parser import Parser
@@ -10,19 +11,6 @@ class CompilationError(Exception):
     def __init__(self, line, column, context, msg):
         super().__init__(f'{context} ({line}, {column}): {msg}')
 
-
-@attrs(auto_attribs=True, slots=True)
-class SegmentData(object):
-    offset: int = 0
-    labels: Dict = Factory(dict)
-    fixups: List = Factory(list)
-
-
-@attrs(auto_attribs=True, slots=True)
-class VirtualSegment(object):
-    offset: int = 0
-    labels: Dict = Factory(dict)
-    fixups: List = Factory(list)
 
 class CompilerBase(object):
     def _error(self, pos, msg):
@@ -101,60 +89,133 @@ class PreProcessor(CompilerBase):
         return self._pre_process(self._parse(ctx_name))
 
 
+@attrs(auto_attribs=True, slots=True)
+class SegmentData(object):
+    offset: int = 0
+    data: bytearray = Factory(bytearray)
+
+
+@attrs(auto_attribs=True, slots=True)
+class VirtualSegment(object):
+    start: int = 0
+    offset: int = 0
+
+    @property
+    def data(self):
+        raise Exception('not allowed')
+
+
 class Compiler(CompilerBase):
     def __init__(self):
         self.reset()
 
     def reset(self):
-        self.defs = {}
+        self.data = bytearray(0xFFFF)
         self.segments = {
-            'text': SegmentData,
-            'data': SegmentData,
-            'bss': VirtualSegment,
-            'zero': VirtualSegment,
+            'text': SegmentData(0x0800, self.data),
+            'data': SegmentData(0x0200, self.data),
+            'bss':  VirtualSegment(0x0100),
+            'zero': VirtualSegment(0x0000),
         }
-        self.labels = {}
         self.fixups = []
-        self.unresolved_labels = []
+        self.scope_stack = []
+        self.seg = self.segments['text']
+
+    @property
+    def scope(self):
+        return self.scope_stack[-1]
+
+    def resolve(self, name):
+        for scope in reversed(self.scope_stack):
+            if name in scope:
+                return scope[name]
+        return None
+
+    def resolve_expr(self, width, addr, expr):
+        value = expr.eval(self)
+        if isinstance(value, int):
+            if width == 1:
+                if lobyte(value) != value:
+                    self.error(expr.pos,
+                            f'Expression value too large for a single byte.')
+                expr_bytes = [value]
+            else:
+                expr_bytes = [lobyte(value), hibyte(value)]
+        else:
+            self.error(expr.pos, f'value of type {type(value)} not supported.')
+        for ii in range(len(expr_bytes)):
+            self.data[addr + ii] = expr_bytes[ii]
+
+    def resolve_fixups(self):
+        def attempt(fixup):
+            try:
+                self.resolve.expr(*fixup)
+                return True
+            except:
+                return False
+        self.fixups[:] = filterfalse(attempt, self.fixups)
+
+    def start_scope(self):
+        self.scope_stack.append({})
+
+    def end_scope(self):
+        self.resolve_fixups()
+        self.scope_stack.pop()
 
     @singledispatchmethod
     def _compile(self, item):
         raise Exception(f'no defined compile handler for item: {type(item)}')
 
     @_compile.register
+    def _compile_scope(self, scope: Scope):
+        self.start_scope()
+
+    @_compile.register
+    def _compile_end_scope(self, endscope: EndScope):
+        self.end_scope()
+
+    @_compile.register
+    def _compile_define(self, define: Define):
+        #TODO: generate error on redefine (use self.resolve)
+        self.scope[define.name] = define
+
+    @_compile.register
     def _compile_label(self, label: Label):
-        ofs = current_seg.offset
-        self.current_seg.labels[label.name] = ofs
-        self.labels[label.name] = ofs
+        #TODO: generate error on relabel or shadow (use self.resolve)
+        self.scope[label.name] = label
+        label.addr = self.seg.offset
 
     @_compile.register
     def _compile_storage(self, storage: Storage):
-        current_seg.extend(x.bytes(ctx))
+        for ii in range(len(storage.width)):
+            fixup = (storage.width, self.seg.offset, storage.elem[ii])
+            try:
+                self.resolve_expr(*fixup)
+            except:
+                # TODO: allow this?  if an expression can't be
+                # resolved at this point, it may not be possible to
+                # handle later due to shifting the expression width
+                self.fixups.append(fixup)
+            self.seg.offset += storage.byte_width
 
     @_compile.register
     def _compile_op(self, op: Op):
-        # TODO: branch based on address mode
-        # TODO: ensure enough information is stored to handle fixup errors on semantic pass
-        current_seg.append(x.op.value)
-        if x.arg:
-            fixup, value = x.arg.eval(self)
-            if fixup:
-                fixups.append(fixup)
-            current.seg.extend(value)
+        self.data[self.seg.offset] = op.op.value
+        self.seg.offset += 1
+        if op.arg:
+            fixup = (op.op.arg_width, self.seg.offset, op.arg)
+            try:
+                self.resolve_expr(*fixup)
+            except Exception as e:
+                raise e
+                self.fixups.append(fixup)
+        self.seg.offset += op.op.arg_width
 
     def compile(self, ast):
-        # TODO: evaluation context that contains segments, current segment, and labels
-        # TODO: eval() will have to return fixup information
-
-        # reset current segment and compile
-        current_seg = segments['text']
-        current_seg.offset = 0x0800  # TODO: set some default
+        self.seg = self.segments['text']
+        self.start_scope()
         for item in ast:
             self._compile(item)
+        self.end_scope()
 
-        # apply fixups
-        for seg in segments.values():
-            for fixup in seg.fixups:
-                pass #self.resolve_fixup(fixup)
-
-        # TODO: semantic pass
+        # TODO: evalute incomplete fixups

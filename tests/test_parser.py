@@ -8,11 +8,12 @@ from xcomp.model import *
 class TestExprContext(ExprContext):
     __test__ = False
 
-    def __init__(self):
-        self.names = {}
+    def __init__(self, names=None):
+        self.names = names or {}
 
-    def resolve_name(self, label_name):
+    def resolve(self, label_name):
         return self.names[label_name]
+
 
 class ParserTest(unittest.TestCase):
     def setUp(self):
@@ -86,7 +87,7 @@ class StorageTest(ParserTest):
     def test_parse_byte(self):
         result = self.parse('.byte 01','byte_storage')
         self.assertEqual(result,
-            Storage(Pos(0, 8), 8, tuple([
+            Storage(Pos(0, 8), 1, tuple([
                 ExprValue(Pos(6, 8), 1)
             ]))
         )
@@ -94,7 +95,7 @@ class StorageTest(ParserTest):
     def test_parse_byte_many(self):
         result = self.parse(".byte 01, 02, 03",'byte_storage')
         self.assertEqual(result,
-            Storage(Pos(0, 16), 8, tuple([
+            Storage(Pos(0, 16), 1, tuple([
                 ExprValue(Pos(6,8), 1),
                 ExprValue(Pos(10,12), 2),
                 ExprValue(Pos(14,16), 3),
@@ -134,7 +135,7 @@ class ExprTest(ParserTest):
             ExprValue(Pos(0, 1), 2),
             ExprName(Pos(4, 7), 'foo'),
         ))
-        ctx = ExprContext({'foo': 7})
+        ctx = TestExprContext({'foo': 7})
         self.assertEqual(result.eval(ctx), 14)
 
 

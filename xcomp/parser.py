@@ -145,10 +145,10 @@ class Parser(ReduceParser):
     ### STORAGE ###
 
     def visit_byte_storage(self, pos, *exprs):
-        return Storage(pos, 8, exprs)
+        return Storage(pos, 1, exprs)
 
     def visit_word_storage(self, pos, *exprs):
-        return Storage(pos, 16, exprs)
+        return Storage(pos, 2, exprs)
 
     ### EXPRESSIONS ###
 

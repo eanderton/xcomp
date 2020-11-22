@@ -4,6 +4,14 @@ from typing import *
 from xcomp.reduce_parser import Pos
 from xcomp.cpu6502 import OpCode, opcode_templates
 
+def lobyte(value):
+    return value & 0xFF
+
+
+def hibyte(value):
+    return (value >> 8) & 0xFF
+
+
 class AbstractContextManager(ABC):
     @abstractmethod
     def get_text(self, ctx_name):
@@ -48,31 +56,23 @@ class Label(object):
     pos: Pos
     name: str
     addr: int = 0
-    resolved: bool = False
+
+    def eval(self, ctx):
+        return self.addr
 
     def __str__(self):
         return f'{self.name}:'
 
 
-@attrs(auto_attribs=True)
-class ExprContext(object):
-    lookup: Factory(dict)
-
+class ExprContext(ABC):
     @abstractmethod
-    def resolve_name(self, label_name):
-        return self.lookup.get(label_name, None)
+    def resolve(self, name):
+        pass
 
 
 class Expr(ABC):
     @abstractmethod
     def eval(self, ctx):
-        pass
-
-    @abstractmethod
-    def validate(self, ctx):
-        return False
-
-    def substitute(self, name, value):
         pass
 
 
@@ -81,11 +81,12 @@ class ExprUnaryOp(Expr):
     pos: Pos
     arg: Expr
 
+    @abstractmethod
+    def oper(self, a):
+        pass
+
     def eval(self, ctx):
         return self.oper(self.arg.eval(ctx))
-
-    def validate(self, ctx):
-        return arg.validate(ctx)
 
 
 class Expr8(ExprUnaryOp):
@@ -114,7 +115,7 @@ class ExprNegate(ExprUnaryOp):
 
 class ExprLobyte(ExprUnaryOp):
     def oper(self, a):
-        return a & 0xFF
+        return lobyte(a)
 
     def __str__(self):
         return f'<{self.arg}'
@@ -122,7 +123,7 @@ class ExprLobyte(ExprUnaryOp):
 
 class ExprHibyte(ExprUnaryOp):
     def oper(self, a):
-        return (a >> 8) & 0xFF
+        return hibyte(a)
 
     def __str__(self):
         return f'<{self.arg}'
@@ -190,9 +191,6 @@ class ExprValue(Expr):
     def eval(self, ctx):
         return self.value
 
-    def validate(self, ctx):
-        return True
-
     def __str__(self):
         if self.base == 2:
             return f'%{self.value:b}'
@@ -207,15 +205,12 @@ class ExprName(Expr):
     value: str
 
     def eval(self, ctx):
-        return ctx.resolve_name(self.value)
-        value = ctx.resolve_name(self.value)
+        value = ctx.resolve(self.value)
         if value is None:
             raise Exception(f'Identifier {self.value} is undefined.')
+        if isinstance(value, Expr):
+            return value.eval(ctx)
         return value
-
-    def validate(self, ctx):
-        value =  ctx.resolve_name(self.value)
-        return value is not None
 
     def __str__(self):
         return self.value
@@ -231,10 +226,13 @@ class Params(object):
 
 
 @attrs(auto_attribs=True)
-class Define(object):
+class Define(Expr):
     pos: Pos
     name: str
     expr: Expr
+
+    def eval(self, ctx):
+        return self.expr.eval(ctx)
 
     def __str__(self):
         return f'.define {self.name} {self.expr}'
@@ -317,7 +315,7 @@ class Storage(object):
 
     def __str__(self):
         items = map(str, self.items)
-        if self.width == 8:
+        if self.width == 1:
             return '.byte ' + (', '.join(items))
         return '.word ' + (', '.join(items))
 

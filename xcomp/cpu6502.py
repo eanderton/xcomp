@@ -23,12 +23,81 @@ class AddressMode(Enum):
     zeropage_y = auto()
     unknown = auto()
 
+# grammar parameter specs by addressing mode
+addressmode_params = {
+    AddressMode.accumulator: ['"a"'],
+    AddressMode.absolute:    ['expr16'],
+    AddressMode.absolute_x:  ['expr16', 'comma', '"x"'],
+    AddressMode.absolute_y:  ['expr16', 'comma', '"y"'],
+    AddressMode.immediate:   ['hash', 'expr8'],
+    AddressMode.implied:     [],
+    AddressMode.indirect:    ['lparen', 'expr16', 'rparen'],
+    AddressMode.indirect_x:  ['lparen', 'expr8', 'comma', '"x"', 'rparen'],
+    AddressMode.indirect_y:  ['lparen', 'expr8', 'rparen', 'comma', '"y"'],
+    AddressMode.relative:    ['expr8'],
+    AddressMode.zeropage:    ['expr8'],
+    AddressMode.zeropage_x:  ['expr8', 'comma', '"x"'],
+    AddressMode.zeropage_y:  ['expr8', 'comma', '"y"'],
+}
+
+addressmode_args = {
+    AddressMode.accumulator: 0,
+    AddressMode.absolute:    1,
+    AddressMode.absolute_x:  1,
+    AddressMode.absolute_y:  1,
+    AddressMode.immediate:   1,
+    AddressMode.implied:     0,
+    AddressMode.indirect:    1,
+    AddressMode.indirect_x:  1,
+    AddressMode.indirect_y:  1,
+    AddressMode.relative:    1,
+    AddressMode.zeropage:    1,
+    AddressMode.zeropage_x:  1,
+    AddressMode.zeropage_y:  1,
+}
+
+addressmode_arg_width = {
+    AddressMode.accumulator: 0,
+    AddressMode.absolute:    2,
+    AddressMode.absolute_x:  2,
+    AddressMode.absolute_y:  2,
+    AddressMode.immediate:   1,
+    AddressMode.implied:     0,
+    AddressMode.indirect:    2,
+    AddressMode.indirect_x:  1,
+    AddressMode.indirect_y:  1,
+    AddressMode.relative:    1,
+    AddressMode.zeropage:    1,
+    AddressMode.zeropage_x:  1,
+    AddressMode.zeropage_y:  1,
+}
+
+opcode_templates = {
+    AddressMode.accumulator: 'A',
+    AddressMode.absolute:    '{arg16}',
+    AddressMode.absolute_x:  '{arg16}, X',
+    AddressMode.absolute_y:  '{arg16}, Y',
+    AddressMode.immediate:   '#{arg8}',
+    AddressMode.implied:     '',
+    AddressMode.indirect:    '({arg16})',
+    AddressMode.indirect_x:  '({arg8}, X)',
+    AddressMode.indirect_y:  '({arg8}), Y',
+    AddressMode.relative:    '{arg8}',
+    AddressMode.zeropage:    '{arg8}',
+    AddressMode.zeropage_x:  '{arg8}, X',
+    AddressMode.zeropage_y:  '{arg8}, Y',
+}
+
+
 @attrs(auto_attribs=True)
 class OpCode(object):
     name: str
     mode: AddressMode
     value: int
 
+    @property
+    def arg_width(self):
+        return addressmode_arg_width[self.mode]
 
 opcode_table = (
     OpCode("adc", AddressMode.immediate,   0x69),
@@ -191,55 +260,5 @@ for op in opcode_table:
 
 # opcodes by machinecode
 opcode_disasm = {x.value: x for x in opcode_table}
-
-# grammar parameter specs by addressing mode
-addressmode_params = {
-    AddressMode.accumulator: ['"a"'],
-    AddressMode.absolute:    ['expr16'],
-    AddressMode.absolute_x:  ['expr16', 'comma', '"x"'],
-    AddressMode.absolute_y:  ['expr16', 'comma', '"y"'],
-    AddressMode.immediate:   ['hash', 'expr8'],
-    AddressMode.implied:     [],
-    AddressMode.indirect:    ['lparen', 'expr16', 'rparen'],
-    AddressMode.indirect_x:  ['lparen', 'expr8', 'comma', '"x"', 'rparen'],
-    AddressMode.indirect_y:  ['lparen', 'expr8', 'rparen', 'comma', '"y"'],
-    AddressMode.relative:    ['expr8'],
-    AddressMode.zeropage:    ['expr8'],
-    AddressMode.zeropage_x:  ['expr8', 'comma', '"x"'],
-    AddressMode.zeropage_y:  ['expr8', 'comma', '"y"'],
-}
-
-addressmode_args = {
-    AddressMode.accumulator: 0,
-    AddressMode.absolute:    1,
-    AddressMode.absolute_x:  1,
-    AddressMode.absolute_y:  1,
-    AddressMode.immediate:   1,
-    AddressMode.implied:     0,
-    AddressMode.indirect:    1,
-    AddressMode.indirect_x:  1,
-    AddressMode.indirect_y:  1,
-    AddressMode.relative:    1,
-    AddressMode.zeropage:    1,
-    AddressMode.zeropage_x:  1,
-    AddressMode.zeropage_y:  1,
-}
-
-opcode_templates = {
-    AddressMode.accumulator: 'A',
-    AddressMode.absolute:    '{arg16}',
-    AddressMode.absolute_x:  '{arg16}, X',
-    AddressMode.absolute_y:  '{arg16}, Y',
-    AddressMode.immediate:   '#{arg8}',
-    AddressMode.implied:     '',
-    AddressMode.indirect:    '({arg16})',
-    AddressMode.indirect_x:  '({arg8}, X)',
-    AddressMode.indirect_y:  '({arg8}), Y',
-    AddressMode.relative:    '{arg8}',
-    AddressMode.zeropage:    '{arg8}',
-    AddressMode.zeropage_x:  '{arg8}, X',
-    AddressMode.zeropage_y:  '{arg8}, Y',
-}
-
 
 
