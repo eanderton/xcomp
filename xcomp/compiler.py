@@ -176,12 +176,16 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_define(self, define: Define):
-        #TODO: generate error on redefine (use self.resolve)
+        if define.name in self.scope:
+            self.error(define.pos,
+                    f'Identifier "{define.name}" is already defined in scope.')
         self.scope[define.name] = define
 
     @_compile.register
     def _compile_label(self, label: Label):
-        #TODO: generate error on relabel or shadow (use self.resolve)
+        if label.name in self.scope:
+            self.error(label.pos,
+                    f'Identifier "{label.name}" is already defined in scope.')
         self.scope[label.name] = label
         label.addr = self.seg.offset
 

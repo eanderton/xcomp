@@ -91,3 +91,13 @@ class CompilerTest(TestBase):
         ])
         print('{0:x}'.format(self.compiler.seg.offset))
         self.assertSegAttrEqual('text', 'offset', 0x0803)
+
+    def test_def_simple(self):
+        self.set_file('root.asm', """
+        .def x $1234
+        adc x
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0800, 0x0803, [
+            0xEA, 0x69, 0x80
+        ])
