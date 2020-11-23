@@ -101,3 +101,13 @@ class CompilerTest(TestBase):
         self.assertDataEqual(0x0800, 0x0803, [
             0x6D, 0x34, 0x12
         ])
+
+    def test_def_expr(self):
+        self.set_file('root.asm', """
+        .def x $1000 + ($120 + $34)
+        adc x
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0800, 0x0803, [
+            0x6D, 0x34, 0x12
+        ])
