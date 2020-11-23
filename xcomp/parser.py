@@ -8,7 +8,6 @@ from xcomp.cpu6502 import *
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 
-# TODO: why does adding ws before label fix this?
 core_syntax     = comment / byte_storage / word_storage / segment /
                   (_ label) /
                   oper / macro_call / _
@@ -40,8 +39,8 @@ macro_args      = expr _ (comma _ expr _)?
 
 label           = ident colon
 
-expr8           = expr
-expr16          = expr
+expr16          = bang_tok expr
+bang_tok        = "!"
 
 # PEMDAS
 expr            = sub / add / negate / lobyte / hibyte / term
@@ -66,7 +65,7 @@ endquote        = "\""
 stringchar      = ~r'[^\\"]+'
 escape_char     = 'r' / 'n' / 't' / 'v' / '"' / '\\'
 
-number          =  base2 / base16 / base10
+number          = base2 / base16 / base10
 base2           = percent_tok ~r"[01]{1,16}"
 base16          = hex_tok ~r"[0-9a-fA-F]{1,4}"
 base10          = ~r"(\d+)"

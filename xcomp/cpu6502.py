@@ -26,18 +26,30 @@ class AddressMode(Enum):
 # grammar parameter specs by addressing mode
 addressmode_params = {
     AddressMode.accumulator: ['"a"'],
-    AddressMode.absolute:    ['expr16'],
+    AddressMode.absolute:    ['expr'],
     AddressMode.absolute_x:  ['expr16', 'comma', '"x"'],
     AddressMode.absolute_y:  ['expr16', 'comma', '"y"'],
-    AddressMode.immediate:   ['hash', 'expr8'],
+    AddressMode.immediate:   ['hash', 'expr'],
     AddressMode.implied:     [],
-    AddressMode.indirect:    ['lparen', 'expr16', 'rparen'],
-    AddressMode.indirect_x:  ['lparen', 'expr8', 'comma', '"x"', 'rparen'],
-    AddressMode.indirect_y:  ['lparen', 'expr8', 'rparen', 'comma', '"y"'],
-    AddressMode.relative:    ['expr8'],
-    AddressMode.zeropage:    ['expr8'],
-    AddressMode.zeropage_x:  ['expr8', 'comma', '"x"'],
-    AddressMode.zeropage_y:  ['expr8', 'comma', '"y"'],
+    AddressMode.indirect:    ['lparen', 'expr', 'rparen'],
+    AddressMode.indirect_x:  ['lparen', 'expr', 'comma', '"x"', 'rparen'],
+    AddressMode.indirect_y:  ['lparen', 'expr', 'rparen', 'comma', '"y"'],
+    AddressMode.relative:    ['expr'],
+    AddressMode.zeropage:    ['expr'],
+    AddressMode.zeropage_x:  ['expr', 'comma', '"x"'],
+    AddressMode.zeropage_y:  ['expr', 'comma', '"y"'],
+}
+
+# 8 bit mods that have a 16 bit equivalent
+addressmode_8to16 = {
+    AddressMode.absolute:   AddressMode.absolute,
+    AddressMode.absolute_x: AddressMode.absolute_x,
+    AddressMode.absolute_y: AddressMode.absolute_y,
+    AddressMode.indirect:   AddressMode.indirect,
+    AddressMode.relative:   AddressMode.relative,  # special case
+    AddressMode.zeropage:   AddressMode.absolute,
+    AddressMode.zeropage_x: AddressMode.absolute_x,
+    AddressMode.zeropage_y: AddressMode.absolute_y,
 }
 
 addressmode_args = {
@@ -95,9 +107,15 @@ class OpCode(object):
     mode: AddressMode
     value: int
 
+    def promote16bits(self):
+        new_mode = addressmode_8to16.get(self.mode, None)
+        if new_mode:
+            return opcode_xref[self.name].get(new_mode, None)
+        return None
+
     @property
-    def arg_width(self):
-        return addressmode_arg_width[self.mode]
+    def width(self):
+        return 1 + addressmode_arg_width[self.mode]
 
 opcode_table = (
     OpCode("adc", AddressMode.immediate,   0x69),

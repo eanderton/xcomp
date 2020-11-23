@@ -5,7 +5,7 @@ from functools import singledispatchmethod
 from xcomp.model import *
 from xcomp.parser import Parser
 from xcomp.reduce_parser import ParseError
-
+from xcomp.cpu6502 import AddressMode
 
 class CompilationError(Exception):
     def __init__(self, line, column, context, msg):
@@ -15,7 +15,7 @@ class CompilationError(Exception):
 class CompilerBase(object):
     def _error(self, pos, msg):
         line, column = self._linecol(pos)
-        raise CompilerError(pos, line, column, msg)
+        raise CompilationError(line, column, pos.context, msg)
 
     def _linecol(self, pos):
         text = self.ctx_manager.get_text(pos.context)
@@ -39,7 +39,7 @@ class PreProcessor(CompilerBase):
         parser = Parser()
         # TODO: handle duplicate include
         text = self.ctx_manager.get_text(ctx_name)
-        return parser.parse(text)
+        return parser.parse(text, context=ctx_name)
 
     @singledispatchmethod
     def _process(self, item):
@@ -106,7 +106,8 @@ class VirtualSegment(object):
 
 
 class Compiler(CompilerBase):
-    def __init__(self):
+    def __init__(self, ctx_manager):
+        self.ctx_manager = ctx_manager
         self.reset()
 
     def reset(self):
@@ -131,20 +132,44 @@ class Compiler(CompilerBase):
                 return scope[name]
         return None
 
-    def resolve_expr(self, width, addr, expr):
+    def resolve_expr(self, opcode, addr, expr):
+        # get value
         value = expr.eval(self)
         if isinstance(value, int):
-            if width == 1:
-                if lobyte(value) != value:
-                    self.error(expr.pos,
-                            f'Expression value too large for a single byte.')
+            if is8bit(value):
                 expr_bytes = [value]
             else:
                 expr_bytes = [lobyte(value), hibyte(value)]
+        elif isinstance(value, str):
+            expr_bytes = list([x for x in bytes(value)])
         else:
-            self.error(expr.pos, f'value of type {type(value)} not supported.')
-        for ii in range(len(expr_bytes)):
+            self._error(expr.pos, f'value of type {type(value)} not supported.')
+        vlen = len(expr_bytes)
+
+        # if resolving to an operation, handle bytes length and emit op byte
+        if opcode:
+            if vlen > 2:
+                self._error(expr.pos,
+                        f'Expresssion evalutes to {vlen} bytes; operations can only take up to 2.')
+            if vlen == 2:
+                opcode = opcode.promote16bits()
+                if not opcode:
+                    self._error(expr.pos, f'{op.name} cannot take a 16 bit value')
+            # special case: reduce argument to a 8 bit relative offset
+            if opcode.mode == AddressMode.relative:
+                jmp = (value - addr) + 2
+                if jmp > 127 or jump < -128:
+                    self._error(expr.pos,
+                            f'Relative jump for {op.name} is out of range.')
+                expr_bytes = [jmp & 0xFF]
+            # emit op byte
+            self.data[addr] = opcode.value
+            addr += 1
+
+        # emit args and return effective length
+        for ii in range(vlen):
             self.data[addr + ii] = expr_bytes[ii]
+        return opcode.width + vlen
 
     def resolve_fixups(self):
         def attempt(fixup):
@@ -177,14 +202,14 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_define(self, define: Define):
         if define.name in self.scope:
-            self.error(define.pos,
+            self._error(define.pos,
                     f'Identifier "{define.name}" is already defined in scope.')
         self.scope[define.name] = define
 
     @_compile.register
     def _compile_label(self, label: Label):
         if label.name in self.scope:
-            self.error(label.pos,
+            self._error(label.pos,
                     f'Identifier "{label.name}" is already defined in scope.')
         self.scope[label.name] = label
         label.addr = self.seg.offset
@@ -204,16 +229,20 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_op(self, op: Op):
-        self.data[self.seg.offset] = op.op.value
-        self.seg.offset += 1
+        opcode = op.op
         if op.arg:
-            fixup = (op.op.arg_width, self.seg.offset, op.arg)
             try:
-                self.resolve_expr(*fixup)
+                self.seg.offset += self.resolve_expr(
+                        opcode, self.seg.offset, op.arg)
             except Exception as e:
                 raise e
-                self.fixups.append(fixup)
-        self.seg.offset += op.op.arg_width
+                fixup_opcode = opcode.promote16bits(self) or opcode
+                self.fixups.append([
+                        fixup_opcode, self.seg.offset, op.arg])
+                self.seg.offset += fixup_opcode.width
+        else:
+            self.data[self.seg.offset] = opcode.value
+            self.seg.offset += opcode.width
 
     def compile(self, ast):
         self.seg = self.segments['text']

@@ -13,7 +13,7 @@ class TestBase(unittest.TestCase):
         self.maxDiff = None
         self.ctx_manager = FileContextManager()
         self.processor = PreProcessor(self.ctx_manager)
-        self.compiler = Compiler()
+        self.compiler = Compiler(self.ctx_manager)
 
     def set_file(self, name, text):
         self.ctx_manager.files[name] = cleandoc(text)
@@ -90,7 +90,7 @@ class CompilerTest(TestBase):
             0xEA, 0x69, 0x80
         ])
         print('{0:x}'.format(self.compiler.seg.offset))
-        self.assertSegAttrEqual('text', 'offset', 0x0803)
+        self.assertSegAttrEqual('text', 'offset', 0x0804)
 
     def test_def_simple(self):
         self.set_file('root.asm', """
@@ -99,5 +99,5 @@ class CompilerTest(TestBase):
         """)
         self.compile('root.asm')
         self.assertDataEqual(0x0800, 0x0803, [
-            0xEA, 0x69, 0x80
+            0x6D, 0x34, 0x12
         ])

@@ -148,6 +148,6 @@ class ReduceParser(object):
         if self.debug:
             print(f'ReduceParser(dbg): FN visit_{node.expr_name} == {fn}({values})')
         if fn:
-            return fn(Pos.fromNode(node), *values)
+            return fn(Pos.fromNode(node, context=self.context), *values)
         else:
             return tuple(values)

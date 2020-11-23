@@ -11,6 +11,9 @@ def lobyte(value):
 def hibyte(value):
     return (value >> 8) & 0xFF
 
+def is8bit(value):
+    return lobyte(value) == value
+
 
 class AbstractContextManager(ABC):
     @abstractmethod
