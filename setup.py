@@ -31,6 +31,7 @@ setuptools.setup(
     ],
     extras_require={
        'develop': [
+           'hexdump',
            'pytest',
            'pytest-cov'
         ],

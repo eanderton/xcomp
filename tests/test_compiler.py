@@ -1,4 +1,5 @@
 import unittest
+import hexdump
 from inspect import cleandoc
 from xcomp.compiler import PreProcessor
 from xcomp.compiler import Compiler
@@ -78,7 +79,9 @@ class CompilerTest(TestBase):
         self.assertEqual(getattr(self.compiler.segments[name], attr), value)
 
     def assertDataEqual(self, start, end, values):
-        self.assertEqual(self.compiler.data[start:end], bytearray(values))
+        left = hexdump.dump(self.compiler.data[start:end])
+        right = hexdump.dump(bytearray(values))
+        self.assertEqual(left, right)
 
     def test_compile_simple(self):
         self.set_file('root.asm', """
@@ -104,7 +107,7 @@ class CompilerTest(TestBase):
 
     def test_def_expr(self):
         self.set_file('root.asm', """
-        .def x $1000 + ($120 + $34)
+        .def x $1000 + ($200 + $34)
         adc x
         """)
         self.compile('root.asm')
