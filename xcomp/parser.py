@@ -9,59 +9,50 @@ grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  (_ label) /
-                  oper / macro_call / _
+                  (_ label) / oper / macro_call / _
 
 comment         = ~r";\s*.*(?=\n|$)"
 
-byte_storage    = byte_tok _ expr _ (comma _ expr _)*
-byte_tok        = ".byte"
-word_storage    = word_tok _ expr _ (comma _ expr _)*
-word_tok        = ".word"
+def             = def_tok _ ident _ expr
 
-segment         = period segment_name _ expr?
+byte_storage    = byte_tok _ storage
+word_storage    = word_tok _ storage
+storage         = expr _ (comma_tok _ expr _)*
+
+segment         = period_tok segment_name _ expr?
 segment_name    = "zero" / "text" / "data" / "bss"
 
 include         = include_tok _ string
-include_tok     = ".include"
-
-def             = def_tok _ ident _ expr
-def_tok         = ".def"
 
 macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
-macro_tok       = ".macro"
-endmacro_tok    = ".endmacro"
-macro_params    = ident _ (comma _ macro_params _)?
+macro_params    = ident _ (comma_tok _ macro_params _)?
 macro_body      = core_syntax*
 
 macro_call      = ident _ macro_args?
-macro_args      = expr _ (comma _ expr _)?
+macro_args      = expr _ (comma_tok _ expr _)?
 
-label           = ident colon
+label           = ident colon_tok
 
 expr16          = bang_tok expr
-bang_tok        = "!"
 
-# PEMDAS
 expr            = sub / add / negate / lobyte / hibyte / term
-negate          = minus _ term
-lobyte          = lessthan _ term
-hibyte          = morethan _ term
-add             = term _ plus _ expr
+negate          = minus_tok _ term
+lobyte          = lessthan_tok _ term
+hibyte          = morethan_tok _ term
+add             = term _ plus_tok _ expr
 sub             = term _ sub _ expr
 
 term            = div / mul / exp
-mul             = exp _ asterisk _ exp
-div             = exp _ slash _ exp
+mul             = exp _ asterisk_tok _ exp
+div             = exp _ slash_tok _ exp
 
 exp             = pow / fact
-pow             = fact carrot fact
+pow             = fact carrot_tok fact
 fact            = ident / string / number / group_expr
 
-group_expr      = lparen _ expr _ rparen
+group_expr      = lparen_tok _ expr _ rparen_tok
 
-string          = quote ((backslash escape_char) / stringchar)* endquote
-endquote        = "\""
+string          = quote_tok ((backslash_tok escape_char) / stringchar)* endquote_tok
 stringchar      = ~r'[^\\"]+'
 escape_char     = 'r' / 'n' / 't' / 'v' / '"' / '\\'
 
@@ -72,34 +63,40 @@ base10          = ~r"(\d+)"
 
 ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
 
+byte_tok        = ".byte"
+word_tok        = ".word"
+include_tok     = ".include"
+def_tok         = ".def"
+macro_tok       = ".macro"
+endmacro_tok    = ".endmacro"
+bang_tok        = "!"
 percent_tok     = "%"
 hex_tok         = ~r"\$|0x"
-backslash       = "\\"
-quote           = "\""
-lparen          = "("
-rparen          = ")"
-plus            = "+"
-minus           = "-"
-slash           = "/"
-carrot          = "^"
-pipe            = "|"
-ampersand       = "&"
-comma           = ","
-hash            = "#"
-lessthan        = "<"
-morethan        = ">"
-colon           = ":"
-asterisk        = "*"
-period          = "."
-
-any             = ~r"."
+backslash_tok   = "\\"
+quote_tok       = "\""
+endquote_tok    = "\""
+lparen_tok      = "("
+rparen_tok      = ")"
+plus_tok        = "+"
+minus_tok       = "-"
+slash_tok       = "/"
+carrot_tok      = "^"
+pipe_tok        = "|"
+ampersand_tok   = "&"
+comma_tok       = ","
+hash_tok        = "#"
+lessthan_tok    = "<"
+morethan_tok    = ">"
+colon_tok       = ":"
+asterisk_tok    = "*"
+period_tok      = "."
 _               = ~r"\s*"
 
-__ignored       = "comment" / "endquote" /
-                  "backslash" / "quote" / "comma" / "hash" / "lparen" / "rparen" /
-                  "plus" / "minus" / "slash" / "carrot" / "pipe" / "ampersand" /
-                  "comma" / "hash" / "lessthan" / "morethan" / "colon" / "asterisk" /
-                  "period" / ~r".*_tok" / "_"
+a_tok           = "a"
+x_tok           = "x"
+y_tok           = "y"
+
+__ignored       = "comment" / ~r".*_tok" / "_"
 """
 
 
@@ -168,7 +165,7 @@ class Parser(ReduceParser):
     def visit_stringchar(self, pos, lit):
         return lit.text
 
-    def error_endquote(self, pos):
+    def error_endquote_tok(self, pos):
         return "Expected string end quote (\")"
 
     def visit_escape_char(self, pos, lit):
@@ -223,7 +220,9 @@ if not __setup_complete:
 
     for op in opcode_table:
         expr = f'op_{op.name}_{op.mode.name}'
-        seq = ' _ '.join([f'_ {op.name}_tok'] + addressmode_params[op.mode])
+        seq = ' _ '.join([f'{op.name}_tok'] + addressmode_params[op.mode])
+        if len(addressmode_params[op.mode]) == 0:
+            seq = '_ ' + seq
         op_names.append(expr)
         grammar_parts.append(f'{expr} = {seq}')
         if addressmode_args[op.mode]:
@@ -234,3 +233,4 @@ if not __setup_complete:
         setattr(Parser, f'visit_{expr}', fn)
     grammar_parts.append('oper = ' + ' / '.join(op_names))
     grammar += '\n'.join(grammar_parts)
+

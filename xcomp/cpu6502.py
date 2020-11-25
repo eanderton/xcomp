@@ -25,19 +25,19 @@ class AddressMode(Enum):
 
 # grammar parameter specs by addressing mode
 addressmode_params = {
-    AddressMode.accumulator: ['"a"'],
+    AddressMode.accumulator: ['a_tok'],
     AddressMode.absolute:    ['expr'],
-    AddressMode.absolute_x:  ['expr16', 'comma', '"x"'],
-    AddressMode.absolute_y:  ['expr16', 'comma', '"y"'],
-    AddressMode.immediate:   ['hash', 'expr'],
+    AddressMode.absolute_x:  ['expr16', 'comma_tok', 'x_tok'],
+    AddressMode.absolute_y:  ['expr16', 'comma_tok', 'y_tok'],
+    AddressMode.immediate:   ['hash_tok', 'expr'],
     AddressMode.implied:     [],
-    AddressMode.indirect:    ['lparen', 'expr', 'rparen'],
-    AddressMode.indirect_x:  ['lparen', 'expr', 'comma', '"x"', 'rparen'],
-    AddressMode.indirect_y:  ['lparen', 'expr', 'rparen', 'comma', '"y"'],
+    AddressMode.indirect:    ['lparen_tok', 'expr', 'rparen_tok'],
+    AddressMode.indirect_x:  ['lparen_tok', 'expr', 'comma_tok', 'x_tok', 'rparen_tok'],
+    AddressMode.indirect_y:  ['lparen_tok', 'expr', 'rparen_tok', 'comma_tok', 'y_tok'],
     AddressMode.relative:    ['expr'],
     AddressMode.zeropage:    ['expr'],
-    AddressMode.zeropage_x:  ['expr', 'comma', '"x"'],
-    AddressMode.zeropage_y:  ['expr', 'comma', '"y"'],
+    AddressMode.zeropage_x:  ['expr', 'comma_tok', 'x_tok'],
+    AddressMode.zeropage_y:  ['expr', 'comma_tok', 'y_tok'],
 }
 
 # 8 bit mods that have a 16 bit equivalent
