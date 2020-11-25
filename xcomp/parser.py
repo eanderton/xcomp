@@ -92,10 +92,10 @@ asterisk_tok    = "*"
 period_tok      = "."
 _               = ~r"\s*"
 
+# 6502 opcode tokens
 a_tok           = "a"
 x_tok           = "x"
 y_tok           = "y"
-
 adc_tok = "adc"
 and_tok = "and"
 asl_tok = "asl"
@@ -150,6 +150,7 @@ txa_tok = "txa"
 txs_tok = "txs"
 tya_tok = "tya"
 
+# 6502 instructions
 op_adc_immediate = adc_tok _ hash_tok _ expr
 op_adc_zeropage = adc_tok _ expr
 op_adc_zeropage_x = adc_tok _ expr _ comma_tok _ x_tok
@@ -302,7 +303,7 @@ op_txa_implied = _ txa_tok
 op_txs_implied = _ txs_tok
 op_tya_implied = _ tya_tok
 
-
+# 6502 operations
 oper = op_adc_immediate / op_adc_zeropage / op_adc_zeropage_x /
 op_adc_absolute / op_adc_absolute_x / op_adc_absolute_y /
 op_adc_indirect_x / op_adc_indirect_y / op_and_immediate / op_and_zeropage / op_and_zeropage_x / op_and_absolute / op_and_absolute_x / op_and_absolute_y / op_and_indirect_x / op_and_indirect_y / op_asl_accumulator / op_asl_zeropage / op_asl_zeropage_x / op_asl_absolute / op_asl_absolute_x / op_bcc_relative / op_bcs_relative / op_beq_relative / op_bit_zeropage / op_bit_absolute / op_bmi_relative / op_bne_relative / op_bpl_relative / op_brk_implied / op_bvc_relative / op_bvc_relative / op_clc_implied / op_cld_implied / op_cli_implied / op_clv_implied / op_cmp_immediate / op_cmp_zeropage / op_cmp_zeropage_x / op_cmp_absolute / op_cmp_absolute_x / op_cmp_absolute_y / op_cmp_indirect_x / op_cmp_indirect_y / op_cpx_immediate / op_cpx_zeropage / op_cpx_absolute / op_cpy_immediate / op_cpy_zeropage / op_cpy_absolute / op_dec_zeropage / op_dec_zeropage_x / op_dec_absolute / op_dec_absolute_x / op_dec_implied / op_dec_implied / op_eor_immediate / op_eor_zeropage / op_eor_zeropage_x / op_eor_absolute / op_eor_absolute_x / op_eor_absolute_y / op_eor_indirect_x / op_eor_indirect_y / op_inc_zeropage / op_inc_zeropage_x / op_inc_absolute / op_inc_absolute_x / op_inx_implied / op_iny_implied / op_jmp_absolute / op_jmp_indirect / op_jsr_absolute / op_lda_immediate / op_lda_zeropage / op_lda_zeropage_x / op_lda_absolute / op_lda_absolute_x / op_lda_absolute_y / op_lda_indirect_x / op_lda_indirect_y / op_ldx_immediate / op_ldx_zeropage / op_ldx_zeropage_y / op_ldx_absolute / op_ldx_absolute_y / op_ldy_immediate / op_ldy_zeropage / op_ldy_zeropage_x / op_ldy_absolute / op_ldy_absolute_x / op_lsr_accumulator / op_lsr_zeropage / op_lsr_zeropage_x / op_lsr_absolute / op_lsr_absolute_x / op_nop_implied / op_ora_immediate / op_ora_zeropage / op_ora_zeropage_x / op_ora_absolute / op_ora_absolute_x / op_ora_absolute_y / op_ora_indirect_x / op_ora_indirect_y / op_pha_implied / op_php_implied / op_pla_implied / op_plp_implied / op_rol_accumulator / op_rol_zeropage / op_rol_zeropage_x / op_rol_absolute / op_rol_absolute_x / op_ror_accumulator / op_ror_zeropage / op_ror_zeropage_x / op_ror_absolute / op_ror_absolute_x / op_rti_implied / op_rts_implied / op_sbc_immediate / op_sbc_zeropage / op_sbc_zeropage_x / op_sbc_absolute / op_sbc_absolute_x / op_sbc_absolute_y / op_sbc_indirect_x / op_sbc_indirect_y / op_sec_implied / op_sed_implied / op_sei_implied / op_sta_zeropage / op_sta_zeropage_x / op_sta_absolute / op_sta_absolute_x / op_sta_absolute_y / op_sta_indirect_x / op_sta_indirect_y / op_stx_zeropage / op_stx_zeropage_y / op_stx_absolute / op_sty_zeropage / op_sty_zeropage_x / op_sty_absolute / op_tax_implied / op_tay_implied / op_tsx_implied / op_txa_implied / op_txs_implied / op_tya_implied
