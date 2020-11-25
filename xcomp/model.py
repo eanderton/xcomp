@@ -11,9 +11,15 @@ def lobyte(value):
 def hibyte(value):
     return (value >> 8) & 0xFF
 
+
 def is8bit(value):
     return lobyte(value) == value
 
+
+class EvalException(Exception):
+    def __init__(self, pos, msg):
+        self.pos = pos
+        super().__init__(msg)
 
 class AbstractContextManager(ABC):
     @abstractmethod
@@ -210,7 +216,7 @@ class ExprName(Expr):
     def eval(self, ctx):
         value = ctx.resolve(self.value)
         if value is None:
-            raise Exception(f'Identifier {self.value} is undefined.')
+            raise EvalException(self.pos, f'Identifier {self.value} is undefined.')
         if isinstance(value, Expr):
             return value.eval(ctx)
         return value
@@ -264,14 +270,6 @@ class Macro(object):
     params: Params
     body: List[Any] = Factory(list)
 
-    def is_singlet(self):
-        return len(self.params) == 0
-
-    def get_param_id(self, name):
-        if isinstance(name, int):
-            name = self.params[name]
-        return f'@{id(self)}_{name}'
-
     def substitute(self, args):
         ''' Return copy of body with params defined. '''
         for ii in range(len(args.values)):
@@ -321,6 +319,7 @@ class Storage(object):
         if self.width == 1:
             return '.byte ' + (', '.join(items))
         return '.word ' + (', '.join(items))
+
 
 @attrs(auto_attribs=True)
 class Segment(object):

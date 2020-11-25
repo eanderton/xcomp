@@ -28,6 +28,8 @@ class CompilerBase(object):
 
 
 class PreProcessor(CompilerBase):
+    debug = False
+
     def __init__(self, ctx_manager):
         self.ctx_manager = ctx_manager
         self.reset()
@@ -37,6 +39,7 @@ class PreProcessor(CompilerBase):
 
     def _parse(self, ctx_name):
         parser = Parser()
+        parser.debug = self.debug
         # TODO: handle duplicate include
         text = self.ctx_manager.get_text(ctx_name)
         return parser.parse(text, context=ctx_name)
@@ -106,6 +109,8 @@ class VirtualSegment(object):
 
 
 class Compiler(CompilerBase):
+    debug = False
+
     def __init__(self, ctx_manager):
         self.ctx_manager = ctx_manager
         self.reset()
@@ -132,9 +137,14 @@ class Compiler(CompilerBase):
                 return scope[name]
         return None
 
+    def eval_expr(self, expr):
+        try:
+            return expr.eval(self)
+        except EvalException as e:
+            self._error(e.pos, str(e))
+
     def resolve_expr(self, opcode, addr, expr):
-        # get value
-        value = expr.eval(self)
+        value = self.eval_expr(expr)
         if isinstance(value, int):
             if is8bit(value):
                 expr_bytes = [value]
@@ -146,7 +156,11 @@ class Compiler(CompilerBase):
             self._error(expr.pos, f'value of type {type(value)} not supported.')
         vlen = len(expr_bytes)
 
+        if self.debug:
+            print('expr bytes', f'${addr:x}', vlen, ' '.join([f'{x:x}' for x in expr_bytes]))
+
         # if resolving to an operation, handle bytes length and emit op byte
+        width = 1
         if opcode:
             if vlen > 2:
                 self._error(expr.pos,
@@ -165,11 +179,12 @@ class Compiler(CompilerBase):
             # emit op byte
             self.data[addr] = opcode.value
             addr += 1
+            width = opcode.width
 
         # emit args and return effective length
         for ii in range(vlen):
             self.data[addr + ii] = expr_bytes[ii]
-        return opcode.width + vlen
+        return width + vlen
 
     def resolve_fixups(self):
         def attempt(fixup):
@@ -216,16 +231,19 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_storage(self, storage: Storage):
-        for ii in range(len(storage.width)):
-            fixup = (storage.width, self.seg.offset, storage.elem[ii])
+        for ii in range(len(storage.items)):
+            fixup = (None, self.seg.offset, storage.items[ii])
             try:
                 self.resolve_expr(*fixup)
             except:
-                # TODO: allow this?  if an expression can't be
-                # resolved at this point, it may not be possible to
-                # handle later due to shifting the expression width
                 self.fixups.append(fixup)
-            self.seg.offset += storage.byte_width
+            self.seg.offset += storage.width
+
+    @_compile.register
+    def _compile_segment(self, segment: Segment):
+        self.seg = self.segments[segment.name]
+        if segment.start is not None:
+            self.seg.offset = self.eval_expr(segment.start)
 
     @_compile.register
     def _compile_op(self, op: Op):

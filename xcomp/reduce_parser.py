@@ -56,7 +56,7 @@ class ParseError(Exception):
 
 
 class ReduceParser(object):
-    debug = True
+    debug = False
 
     def __init__(self, grammar_ebnf, unwrapped_exceptions=None):
         '''

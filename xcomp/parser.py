@@ -19,7 +19,7 @@ byte_tok        = ".byte"
 word_storage    = word_tok _ expr _ (comma _ expr _)*
 word_tok        = ".word"
 
-segment         = period segment_name _ number?
+segment         = period segment_name _ expr?
 segment_name    = "zero" / "text" / "data" / "bss"
 
 include         = include_tok _ string

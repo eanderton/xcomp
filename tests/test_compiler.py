@@ -14,7 +14,9 @@ class TestBase(unittest.TestCase):
         self.maxDiff = None
         self.ctx_manager = FileContextManager()
         self.processor = PreProcessor(self.ctx_manager)
+        #self.processor.debug = True
         self.compiler = Compiler(self.ctx_manager)
+        self.compiler.debug = True
 
     def set_file(self, name, text):
         self.ctx_manager.files[name] = cleandoc(text)
@@ -22,6 +24,14 @@ class TestBase(unittest.TestCase):
     def assertAstEqual(self, ast, ast_text):
         left = '\n'.join(map(str, ast))
         right = cleandoc(ast_text)
+        self.assertEqual(left, right)
+
+    def assertSegAttrEqual(self, name, attr, value):
+        self.assertEqual(getattr(self.compiler.segments[name], attr), value)
+
+    def assertDataEqual(self, start, end, values):
+        left = hexdump.dump(self.compiler.data[start:end])
+        right = hexdump.dump(bytearray(values))
         self.assertEqual(left, right)
 
     def parse(self, name):
@@ -75,13 +85,20 @@ class PreprocessorTest(TestBase):
 
 
 class CompilerTest(TestBase):
-    def assertSegAttrEqual(self, name, attr, value):
-        self.assertEqual(getattr(self.compiler.segments[name], attr), value)
+    def test_segment(self):
+        self.set_file('root.asm', """
+        .def foo $1234
+        .text foo
+        """)
+        self.compile('root.asm')
+        self.assertEqual(self.compiler.segments['text'].offset, 0x1234)
 
-    def assertDataEqual(self, start, end, values):
-        left = hexdump.dump(self.compiler.data[start:end])
-        right = hexdump.dump(bytearray(values))
-        self.assertEqual(left, right)
+        with self.assertRaisesRegex(CompilationError,
+                r'root.asm \(1, 7\): Identifier foo is undefined.'):
+            self.set_file('root.asm', """
+            .text foo
+            """)
+            self.compile('root.asm')
 
     def test_compile_simple(self):
         self.set_file('root.asm', """
@@ -114,3 +131,15 @@ class CompilerTest(TestBase):
         self.assertDataEqual(0x0800, 0x0803, [
             0x6D, 0x34, 0x12
         ])
+
+    def test_storage_byte(self):
+        self.set_file('root.asm', """
+        .data 0x0200
+        .byte $CA, $FE, $BA, $BE
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0204, [
+            0xCA, 0xFE, 0xBA, 0xBE
+        ])
+
+
