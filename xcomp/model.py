@@ -16,6 +16,10 @@ def is8bit(value):
     return lobyte(value) == value
 
 
+def stringbytes(value):
+    return list([x for x in bytes(value, 'utf-8')])
+
+
 class EvalException(Exception):
     def __init__(self, pos, msg):
         self.pos = pos
@@ -53,24 +57,14 @@ class String(object):
         self.pos = pos
         self.value = ''.join(chars)
 
+    def eval(self, ctx):
+        return self.value
+
 
 @attrs(auto_attribs=True)
 class Include(object):
     pos: Pos
     filename: String
-
-
-@attrs(auto_attribs=True)
-class Label(object):
-    pos: Pos
-    name: str
-    addr: int = 0
-
-    def eval(self, ctx):
-        return self.addr
-
-    def __str__(self):
-        return f'{self.name}:'
 
 
 class ExprContext(ABC):
@@ -83,6 +77,20 @@ class Expr(ABC):
     @abstractmethod
     def eval(self, ctx):
         pass
+
+
+@attrs(auto_attribs=True)
+class Label(Expr):
+    pos: Pos
+    name: str
+    addr: int = 0
+
+    def eval(self, ctx):
+        return self.addr
+
+    def __str__(self):
+        return f'{self.name}:'
+
 
 
 @attrs(auto_attribs=True)

@@ -151,7 +151,7 @@ class Compiler(CompilerBase):
             else:
                 expr_bytes = [lobyte(value), hibyte(value)]
         elif isinstance(value, str):
-            expr_bytes = list([x for x in bytes(value)])
+            expr_bytes = stringbytes(value)
         else:
             self._error(expr.pos, f'value of type {type(value)} not supported.')
         vlen = len(expr_bytes)
@@ -168,14 +168,15 @@ class Compiler(CompilerBase):
             if vlen == 2:
                 opcode = opcode.promote16bits()
                 if not opcode:
-                    self._error(expr.pos, f'{op.name} cannot take a 16 bit value')
+                    self._error(expr.pos, f'operation cannot take a 16 bit value')
             # special case: reduce argument to a 8 bit relative offset
             if opcode.mode == AddressMode.relative:
-                jmp = (value - addr) + 2
-                if jmp > 127 or jump < -128:
+                jmp = (value - (addr + 2))
+                if jmp > 127 or jmp < -128:
                     self._error(expr.pos,
-                            f'Relative jump for {op.name} is out of range.')
+                            f'Relative jump for {opcode.name} is out of range.')
                 expr_bytes = [jmp & 0xFF]
+                vlen = 1
             # emit op byte
             self.data[addr] = opcode.value
             addr += 1
@@ -235,7 +236,7 @@ class Compiler(CompilerBase):
             fixup = (None, self.seg.offset, storage.items[ii])
             try:
                 self.resolve_expr(*fixup)
-            except:
+            except Exception as e:
                 self.fixups.append(fixup)
             self.seg.offset += storage.width
 
@@ -252,9 +253,8 @@ class Compiler(CompilerBase):
             try:
                 self.seg.offset += self.resolve_expr(
                         opcode, self.seg.offset, op.arg)
-            except Exception as e:
-                raise e
-                fixup_opcode = opcode.promote16bits(self) or opcode
+            except:
+                fixup_opcode = opcode.promote16bits() or opcode
                 self.fixups.append([
                         fixup_opcode, self.seg.offset, op.arg])
                 self.seg.offset += fixup_opcode.width
@@ -267,6 +267,6 @@ class Compiler(CompilerBase):
         self.start_scope()
         for item in ast:
             self._compile(item)
+        for fixup in self.fixups:
+            self.resolve_expr(*fixup)
         self.end_scope()
-
-        # TODO: evalute incomplete fixups

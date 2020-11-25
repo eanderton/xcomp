@@ -85,7 +85,7 @@ class PreprocessorTest(TestBase):
 
 
 class CompilerTest(TestBase):
-    def test_segment(self):
+    def test_segment_expr(self):
         self.set_file('root.asm', """
         .def foo $1234
         .text foo
@@ -93,6 +93,7 @@ class CompilerTest(TestBase):
         self.compile('root.asm')
         self.assertEqual(self.compiler.segments['text'].offset, 0x1234)
 
+    def test_segment_expr_fail(self):
         with self.assertRaisesRegex(CompilationError,
                 r'root.asm \(1, 7\): Identifier foo is undefined.'):
             self.set_file('root.asm', """
@@ -109,9 +110,30 @@ class CompilerTest(TestBase):
         self.assertDataEqual(0x0800, 0x0803, [
             0xEA, 0x69, 0x80
         ])
-        print('{0:x}'.format(self.compiler.seg.offset))
         self.assertSegAttrEqual('text', 'offset', 0x0804)
 
+    def test_op_arg_fail(self):
+        with self.assertRaisesRegex(CompilationError,
+                r'root.asm \(1, 6\): operation cannot take a 16 bit value'):
+            self.set_file('root.asm', """
+            adc #$1234
+            """)
+            self.compile('root.asm')
+
+    def test_relative_jmp(self):
+        self.set_file('root.asm', """
+        .text 0x0800
+        loop:
+            nop
+            bcc loop
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0800, 0x0803, [
+            0xEA, 0x90, 0xFD,
+        ])
+
+
+class DefineTest(TestBase):
     def test_def_simple(self):
         self.set_file('root.asm', """
         .def x $1234
@@ -132,6 +154,8 @@ class CompilerTest(TestBase):
             0x6D, 0x34, 0x12
         ])
 
+
+class StorageTest(TestBase):
     def test_storage_byte(self):
         self.set_file('root.asm', """
         .data 0x0200
@@ -141,5 +165,45 @@ class CompilerTest(TestBase):
         self.assertDataEqual(0x0200, 0x0204, [
             0xCA, 0xFE, 0xBA, 0xBE
         ])
+
+    def test_storage_byte_def(self):
+        self.set_file('root.asm', """
+        .def foo $66
+        .data 0x0200
+        .byte foo
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0201, [
+            0x66,
+        ])
+
+    def test_storage_word(self):
+        self.set_file('root.asm', """
+        .data 0x0200
+        .word $CA, $FE, $11BA, $22BE
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0208, [
+            0xCA, 0x00, 0xFE, 0x00, 0xBA, 0x11, 0xBE, 0x22,
+        ])
+
+    def test_storage_word_def(self):
+        self.set_file('root.asm', """
+        .def foo $66
+        .data 0x0200
+        .word foo
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0202, [
+            0x66, 0x00,
+        ])
+
+    def test_storage_str(self):
+        self.set_file('root.asm', """
+        .data 0x0200
+        .byte "hello world"
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x020B, stringbytes('hello world'))
 
 
