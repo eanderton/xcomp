@@ -17,7 +17,7 @@ def is8bit(value):
     return lobyte(value) == value
 
 
-def stringbytes(value, encoding='utf-8'):
+def stringbytes(value, encoding):
     return list([x for x in bytes(value, encoding)])
 
 

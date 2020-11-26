@@ -26,8 +26,7 @@ setuptools.setup(
     packages=['xcomp'],
     test_suite='tests',
     install_requires=[
-        'pragma_utils',
-        'oxeye',
+        'cbmcodecs',
     ],
     extras_require={
        'develop': [

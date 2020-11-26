@@ -149,6 +149,40 @@ class EncodingTest(TestBase):
             """)
             self.compile('root.asm')
 
+    def test_petscii_simple(self):
+        self.set_file('root.asm', """
+        .encoding "petscii-c64en-lc"
+        .data $0200
+        .byte "hello world"
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x020B, [
+            0x48, 0x45, 0x4C, 0x4C, 0x4F,  0x20,  0x57, 0x4F, 0x52, 0x4C, 0x44,
+        ])
+
+    def test_petscii_simple(self):
+        self.set_file('root.asm', """
+        .encoding "petscii-c64en-uc"
+        .data $0200
+        .byte "£", "π", "←", "↑"
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0204, [
+            0x5C, 0xFF, 0x5F, 0x5E,
+        ])
+
+    def test_petscii_simple_fail(self):
+        with self.assertRaisesRegex(CompilationError,
+                r"root.asm \(3, 7\): 'charmap' codec can't encode character '\\u03c0' " +
+                'in position 1: character maps to <undefined>'):
+            self.set_file('root.asm', """
+            .encoding "petscii-c64en-lc"
+            .data $0200
+            .byte "£π←↑"
+            """)
+            self.compile('root.asm')
+
+
 
 class DefineTest(TestBase):
     def test_def_simple(self):
@@ -221,6 +255,6 @@ class StorageTest(TestBase):
         .byte "hello world"
         """)
         self.compile('root.asm')
-        self.assertDataEqual(0x0200, 0x020B, stringbytes('hello world'))
+        self.assertDataEqual(0x0200, 0x020B, stringbytes('hello world', 'utf-8'))
 
 

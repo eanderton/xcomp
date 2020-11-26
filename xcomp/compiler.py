@@ -1,4 +1,5 @@
 import codecs
+import cbmcodecs
 from attr import attrib, attrs, Factory
 from typing import *
 from itertools import filterfalse
@@ -95,8 +96,8 @@ class PreProcessor(CompilerBase):
 
 @attrs(auto_attribs=True, slots=True)
 class SegmentData(object):
-    offset: int = 0
-    _data: []
+    offset: int
+    data: list
     # TODO: provide property to write data here
     # TODO: capture start/end extents based on write activity
 
@@ -145,7 +146,10 @@ class Compiler(CompilerBase):
             else:
                 expr_bytes = [lobyte(value), hibyte(value)]
         elif isinstance(value, str):
-            expr_bytes = stringbytes(value, self.encoding)
+            try:
+                expr_bytes = stringbytes(value, self.encoding)
+            except UnicodeError as e:
+                self._error(expr.pos, str(e))
         else:
             self._error(expr.pos, f'value of type {type(value)} not supported.')
         vlen = len(expr_bytes)
