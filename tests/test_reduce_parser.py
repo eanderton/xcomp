@@ -59,24 +59,24 @@ class TestReduceParser(unittest.TestCase):
 
     def test_simple_literal(self):
         full_text='hello'
-        self.assertEqual(self.parse(full_text, 'goal'), (
+        self.assertEqual(self.parse(full_text, 'goal'), [
             self.tok(0, 5),
-        ))
+        ])
         full_text='world'
-        self.assertEqual(self.parse(full_text, 'goal'), (
+        self.assertEqual(self.parse(full_text, 'goal'), [
             self.tok(0, 5),
-        ))
+        ])
 
     def test_token_stream(self):
         full_text='1 + 3'
-        self.assertEqual(self.parse(full_text, 'expr'), (
+        self.assertEqual(self.parse(full_text, 'expr'), [
             self.tok(0, 1),
             self.tok(2, 3),
             self.tok(4, 5),
-        ))
+        ])
 
     def test_group(self):
         full_text="(3*2)"
-        self.assertEqual(self.parse(full_text, 'expr'), (
+        self.assertEqual(self.parse(full_text, 'expr'), [[
             'group expression: 3 * 2',
-        ))
+        ]])

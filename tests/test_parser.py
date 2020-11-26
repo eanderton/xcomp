@@ -31,17 +31,17 @@ class ParserTest(unittest.TestCase):
 class IgnoredTest(ParserTest):
     def test_ws(self):
         result = self.parse('', 'goal')
-        self.assertEqual(result, tuple())
+        self.assertEqual(result, [])
         result = self.parse(' ', 'goal')
-        self.assertEqual(result, tuple())
+        self.assertEqual(result, [])
         result = self.parse('\n', 'goal')
-        self.assertEqual(result, tuple())
+        self.assertEqual(result, [])
 
     def test_comment(self):
         result = self.parse('''
         ; hello world
         ''', 'goal')
-        self.assertEqual(result, tuple())
+        self.assertEqual(result, [])
 
 
 class SegmentTest(ParserTest):

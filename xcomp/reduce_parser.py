@@ -1,6 +1,5 @@
 from attr import attrib, attrs, Factory
 from typing import *
-from collections.abc import Iterable
 from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
 import parsimonious.exceptions as exceptions
@@ -55,6 +54,17 @@ class ParseError(Exception):
         return ParseError(line, column, pos.context, msg)
 
 
+class TokenList(list):
+    '''
+    List placeholder type used during visit pass of AST.
+
+    Used to differentiate from list or other iterable types that may be
+    returned from visit functions.  TokenList is intended to be used
+    internally within the ReduceParser
+    '''
+    pass
+
+
 class ReduceParser(object):
     debug = False
 
@@ -77,17 +87,32 @@ class ReduceParser(object):
         raise ParseError(line, column, context, msg)
 
     def error_generic(self, e):
-        ''' Generic hook for handling parsing errors. '''
+        '''
+        Generic hook for handling parsing errors.
+
+        Returns a string containing the error text for the passed exception
+        e.
+
+        Underscores in the expression name for the error are replaced with
+        spaces in the returned error text.
+        '''
+
         name = e.expr.name if e.expr.name else str(e.expr)
         name = name.replace('_', ' ')
         return f'expected {name} expression'
 
     def parse(self, text, pos=0, context=None, rule=None):
         '''
-        Parses a grammar and returns an token tuple.
+        Parses text against the configured grammar and returns an token tuple.
 
         Returned nodes are 'flattened' by the visit process built into this
         class.  See visit() for more information.
+
+        If ParseError is generated, error_{name} is called where name, is
+        the name of the expression that failed.  If no such method is
+        provdied, error_generic is used instead.  The result of that
+        function is passed on to error(), along with line, column, and
+        context information.
         '''
 
         self.context = context or '<internal>'
@@ -103,7 +128,13 @@ class ReduceParser(object):
     def is_ignored_expr(self, name):
         '''
         Returns true if `name` is an ignored expression.
+
+        Any rule named __ignored in the grammer is used to conduct
+        this test.  The provided name is passed to this special rule
+        as the text to parse.  The function returns True if that parse
+        is a success, and False if not.
         '''
+
         try:
             self.grammar['__ignored'].parse(name)
             return True
@@ -120,7 +151,6 @@ class ReduceParser(object):
         output of any custom visit functions.  Optional and productions that
         have zero children are collapsed to no tokens in the output stream.
 
-
         Custom visit functions may be added for any expression if they match
         the form of `visit_{node.expr_name}`.  These are passed a position
         argument, and `*args` for all the child tokens at that part of the grammar.
@@ -131,7 +161,7 @@ class ReduceParser(object):
 
         if self.debug:
             print(f'ReduceParser(dbg): [{node.expr_name}] type: {type(node.expr)} text: {node.text} children: {len(node.children)}')
-        values = []
+        values = TokenList()
         if isinstance(node.expr, (expressions.Regex, expressions.Literal)):
             values.append(Token.fromNode(node, context=self.context))
         else:
@@ -140,7 +170,7 @@ class ReduceParser(object):
                     continue
                 n = self.visit(n)
                 if n:
-                    if isinstance(n, Iterable):
+                    if isinstance(n, TokenList):
                         values.extend(n)
                     else:
                         values.append(n)
@@ -150,4 +180,4 @@ class ReduceParser(object):
         if fn:
             return fn(Pos.fromNode(node, context=self.context), *values)
         else:
-            return tuple(values)
+            return TokenList(values)

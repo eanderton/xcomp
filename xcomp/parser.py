@@ -1,9 +1,11 @@
-from itertools import chain
 from parsimonious.grammar import Grammar, TokenGrammar
 from xcomp.model import *
 from xcomp.reduce_parser import ReduceParser, Token
 from xcomp.cpu6502 import *
 
+# TODO: collapse repetition of op parsing into something more sane
+# TODO: add scope/endscope
+# TODO: add .bin <filename> for direct binary include
 
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*
@@ -425,7 +427,7 @@ class Parser(ReduceParser):
     def visit_stringchar(self, pos, lit):
         return lit.text
 
-    def error_endquote_tok(self, pos):
+    def error_endquote_tok(self, e):
         return "Expected string end quote (\")"
 
     def visit_escape_char(self, pos, lit):
@@ -458,6 +460,7 @@ class Parser(ReduceParser):
     def visit_ident(self, pos, lit):
         return ExprName(pos, lit.text)
 
+    ### OP ###
 
     def visit_op_adc_immediate(self, pos, arg=None):
         return Op(pos, opcode_xref["adc"][AddressMode.immediate], arg)
