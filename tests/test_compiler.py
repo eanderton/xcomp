@@ -133,6 +133,23 @@ class CompilerTest(TestBase):
         ])
 
 
+class EncodingTest(TestBase):
+    def test_set_encoding(self):
+        self.set_file('root.asm', """
+        .encoding "utf-16"
+        """)
+        self.compile('root.asm')
+        self.assertEqual(self.compiler.encoding, 'utf-16')
+
+    def test_set_encoding_fail(self):
+        with self.assertRaisesRegex(CompilationError,
+                r'root.asm \(1, 1\): Invalid string codec "foobar"'):
+            self.set_file('root.asm', """
+            .encoding "foobar"
+            """)
+            self.compile('root.asm')
+
+
 class DefineTest(TestBase):
     def test_def_simple(self):
         self.set_file('root.asm', """

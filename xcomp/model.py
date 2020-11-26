@@ -4,6 +4,7 @@ from typing import *
 from xcomp.reduce_parser import Pos
 from xcomp.cpu6502 import OpCode, opcode_templates
 
+
 def lobyte(value):
     return value & 0xFF
 
@@ -16,8 +17,8 @@ def is8bit(value):
     return lobyte(value) == value
 
 
-def stringbytes(value):
-    return list([x for x in bytes(value, 'utf-8')])
+def stringbytes(value, encoding='utf-8'):
+    return list([x for x in bytes(value, encoding)])
 
 
 class EvalException(Exception):
@@ -50,6 +51,12 @@ class FileContextManager(AbstractContextManager):
 
     def exists(self, filename):
         return filename in self.files
+
+
+@attrs(auto_attribs=True)
+class Encoding(object):
+    pos: Pos
+    name: str
 
 
 class String(object):

@@ -1,3 +1,4 @@
+import codecs
 from attr import attrib, attrs, Factory
 from typing import *
 from itertools import filterfalse
@@ -95,17 +96,9 @@ class PreProcessor(CompilerBase):
 @attrs(auto_attribs=True, slots=True)
 class SegmentData(object):
     offset: int = 0
-    data: bytearray = Factory(bytearray)
-
-
-@attrs(auto_attribs=True, slots=True)
-class VirtualSegment(object):
-    start: int = 0
-    offset: int = 0
-
-    @property
-    def data(self):
-        raise Exception('not allowed')
+    _data: []
+    # TODO: provide property to write data here
+    # TODO: capture start/end extents based on write activity
 
 
 class Compiler(CompilerBase):
@@ -116,12 +109,13 @@ class Compiler(CompilerBase):
         self.reset()
 
     def reset(self):
+        self.encoding = 'utf-8'
         self.data = bytearray(0xFFFF)
         self.segments = {
             'text': SegmentData(0x0800, self.data),
             'data': SegmentData(0x0200, self.data),
-            'bss':  VirtualSegment(0x0100),
-            'zero': VirtualSegment(0x0000),
+            'bss':  SegmentData(0x0100, self.data),
+            'zero': SegmentData(0x0000, self.data),
         }
         self.fixups = []
         self.scope_stack = []
@@ -151,7 +145,7 @@ class Compiler(CompilerBase):
             else:
                 expr_bytes = [lobyte(value), hibyte(value)]
         elif isinstance(value, str):
-            expr_bytes = stringbytes(value)
+            expr_bytes = stringbytes(value, self.encoding)
         else:
             self._error(expr.pos, f'value of type {type(value)} not supported.')
         vlen = len(expr_bytes)
@@ -206,6 +200,14 @@ class Compiler(CompilerBase):
     @singledispatchmethod
     def _compile(self, item):
         raise Exception(f'no defined compile handler for item: {type(item)}')
+
+    @_compile.register
+    def _compile_encoding(self, encoding: Encoding):
+        try:
+            codecs.getreader(encoding.name)
+            self.encoding = encoding.name
+        except LookupError:
+            self._error(encoding.pos, f'Invalid string codec "{encoding.name}"')
 
     @_compile.register
     def _compile_scope(self, scope: Scope):

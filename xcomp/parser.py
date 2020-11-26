@@ -11,9 +11,11 @@ grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  (_ label) / oper / macro_call / _
+                  encoding / (_ label) / oper / macro_call / _
 
 comment         = ~r";\s*.*(?=\n|$)"
+
+include         = include_tok _ string
 
 def             = def_tok _ ident _ expr
 
@@ -24,7 +26,7 @@ storage         = expr _ (comma_tok _ expr _)*
 segment         = period_tok segment_name _ expr?
 segment_name    = "zero" / "text" / "data" / "bss"
 
-include         = include_tok _ string
+encoding        = encoding_tok _ string
 
 macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
 macro_params    = ident _ (comma_tok _ macro_params _)?
@@ -66,6 +68,7 @@ base10          = ~r"(\d+)"
 ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
 
 # asm grammar tokens
+encoding_tok    = ".encoding"
 byte_tok        = ".byte"
 word_tok        = ".word"
 include_tok     = ".include"
@@ -366,6 +369,9 @@ class Parser(ReduceParser):
 
     def __init__(self):
         super().__init__(grammar_ebnf=grammar)
+
+    def visit_encoding(self, pos, name):
+        return Encoding(pos, name.value)
 
     def visit_segment(self, pos, name, addr=None):
         return Segment(pos, name.text, addr)

@@ -27,7 +27,6 @@ class ParserTest(unittest.TestCase):
         #print(self.parser.grammar)
         return result
 
-
 class IgnoredTest(ParserTest):
     def test_ws(self):
         result = self.parse('', 'goal')
@@ -42,6 +41,12 @@ class IgnoredTest(ParserTest):
         ; hello world
         ''', 'goal')
         self.assertEqual(result, [])
+
+
+class EncodingTest(ParserTest):
+    def test_encoding(self):
+        result = self.parse('.encoding "foo"', 'encoding')
+        self.assertEqual(result.name, 'foo')
 
 
 class SegmentTest(ParserTest):
