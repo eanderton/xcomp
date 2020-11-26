@@ -9,6 +9,7 @@ from xcomp.parser import Parser
 from xcomp.reduce_parser import ParseError
 from xcomp.cpu6502 import AddressMode
 
+
 class CompilationError(Exception):
     def __init__(self, line, column, context, msg):
         super().__init__(f'{context} ({line}, {column}): {msg}')
@@ -52,7 +53,10 @@ class PreProcessor(CompilerBase):
 
     @_process.register
     def _process_include(self, include: Include):
-        included_ast = self._parse(include.filename)
+        try:
+            included_ast = self._parse(include.filename)
+        except FileContextException as e:
+            self._error(include.pos, str(e))
         for x in self._pre_process(included_ast):
             yield x
 

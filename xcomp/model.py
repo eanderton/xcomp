@@ -1,3 +1,4 @@
+import os
 from abc import *
 from attr import attrib, attrs, Factory
 from typing import *
@@ -36,16 +37,29 @@ class AbstractContextManager(ABC):
         return False
 
 
+class FileContextException(Exception):
+    pass
+
+
 @attrs(auto_attribs=True, slots=True)
 class FileContextManager(AbstractContextManager):
+    include_paths: list = Factory(list)
     files: Dict = Factory(dict)
 
-    def get_text(self, filename):
-        # TODO: normalize path
-        # TODO: check for file existence
+    def _search_file(self, filename):
+        for inc in self.include_paths:
+            test = os.path.expanduser(os.path.join(inc, filename))
+            if os.path.isfile(test):
+                return test
+        return None
 
+    def get_text(self, filename):
         if filename not in self.files:
-            with open(filename) as f:
+            full_filename = self._search_file(filename)
+            if not full_filename:
+                raise FileContextException(
+                        f'Cannot find "{filename}" on any configured search path.')
+            with open(full_filename) as f:
                 self.files[filename] = f.read()
         return self.files[filename]
 
