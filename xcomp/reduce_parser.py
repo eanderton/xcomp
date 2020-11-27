@@ -19,6 +19,7 @@ class Pos(object):
     def __repr__(self):
         return f'{self.context}({self.start}:{self.end})'
 
+NullPos = Pos(0, 0)
 
 @attrs(auto_attribs=True, slots=True)
 class Token(object):

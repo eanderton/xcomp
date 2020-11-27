@@ -1,9 +1,11 @@
 import unittest
 import hexdump
+import io
 from inspect import cleandoc
 from xcomp.compiler import PreProcessor
 from xcomp.compiler import Compiler
 from xcomp.compiler import CompilationError
+from xcomp.decompiler import ModelPrinter
 from xcomp.parser import Parser
 from xcomp.model import *
 
@@ -22,9 +24,12 @@ class TestBase(unittest.TestCase):
         self.ctx_manager.files[name] = cleandoc(text)
 
     def assertAstEqual(self, ast, ast_text):
-        left = '\n'.join(map(str, ast))
-        right = cleandoc(ast_text)
-        self.assertEqual(left, right)
+        buf = io.StringIO()
+        printer = ModelPrinter(stream=buf, ansimode=False)
+        for x in ast:
+            printer(x)
+        buf.seek(0)
+        self.assertEqual(buf.read(), cleandoc(ast_text)+'\n')
 
     def assertSegAttrEqual(self, name, attr, value):
         self.assertEqual(getattr(self.compiler.segments[name], attr), value)
@@ -48,21 +53,25 @@ class PreprocessorTest(TestBase):
                 nop
                 adc #value
             .endmacro
-            .text 0x8000
+                .text 0x8000
             start:
                 lda #$80
                 lda <foo
                 foobar 123
             """)
         self.assertAstEqual(self.parse('foo.asm'), """
-            .text $8000
+            ; foo.asm
+                .text $8000
             start:
                 lda #$80
                 lda <foo
+            ; <internal>
             .scope
-            .define value 123
+                .def value 123
+            ; foo.asm
                 nop
                 adc #value
+            ; <internal>
             .endscope
             """)
 
@@ -77,9 +86,12 @@ class PreprocessorTest(TestBase):
         adc #$80
         """)
         self.assertAstEqual(self.parse('root.asm'), """
-        .text
+        ; root.asm
+            .text
+        ; test.asm
             lda $40
             adc #$80
+        ; root.asm
             nop
         """)
 
@@ -181,7 +193,6 @@ class EncodingTest(TestBase):
             .byte "£π←↑"
             """)
             self.compile('root.asm')
-
 
 
 class DefineTest(TestBase):

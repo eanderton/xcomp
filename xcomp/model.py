@@ -1,10 +1,16 @@
 import os
 from abc import *
-from attr import attrib, attrs, Factory
+from attr import attrib
+from attr import attrs
+from attr import Factory
 from typing import *
 from xcomp.reduce_parser import Pos
-from xcomp.cpu6502 import OpCode, opcode_templates
+from xcomp.reduce_parser import NullPos
+from xcomp.cpu6502 import OpCode
+from xcomp.cpu6502 import opcode_templates
 
+# TODO: move str rendering to decompiler
+# TOOD: move expr visit to compiler
 
 def lobyte(value):
     return value & 0xFF
@@ -32,10 +38,6 @@ class AbstractContextManager(ABC):
     def get_text(self, ctx_name):
         return None
 
-    @abstractmethod
-    def exists(self, ctx_name):
-        return False
-
 
 class FileContextException(Exception):
     pass
@@ -62,9 +64,6 @@ class FileContextManager(AbstractContextManager):
             with open(full_filename) as f:
                 self.files[filename] = f.read()
         return self.files[filename]
-
-    def exists(self, filename):
-        return filename in self.files
 
 
 @attrs(auto_attribs=True)
@@ -277,11 +276,13 @@ class Define(Expr):
 
 
 class Scope(object):
+    pos: Pos = NullPos
     def __str__(self):
         return '.scope'
 
 
 class EndScope(object):
+    pos: Pos = NullPos
     def __str__(self):
         return '.endscope'
 

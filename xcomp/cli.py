@@ -12,6 +12,7 @@ from pragma_utils.decorators import mapped_args
 from .settings import printer
 from xcomp.compiler import PreProcessor
 from xcomp.compiler import Compiler
+from xcomp.decompiler import ModelPrinter
 from xcomp.model import FileContextManager
 
 module_path = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +24,6 @@ cli_defaults = {
 }
 
 # TODO: pretty printing for exceptions
-# TODO: pretty printer for token stream on preprocessor
 # TODO: pretty printing on debug messages - use logging?
 
 @mapped_args
@@ -42,15 +42,15 @@ def do_compile(ctx_manager, debug, source_file):
     import hexdump
     print(hexdump.dump(compiler.data))
 
+
 @mapped_args
 def do_preprocess(ctx_manager, debug, source_file):
-    assert(ctx_manager)
     preproc = PreProcessor(ctx_manager)
     preproc.debug = debug
     ast = preproc.parse(source_file)
-
+    printer = ModelPrinter(ansimode=not is_piped())
     for x in ast:
-        printer.text(str(x)).newline()
+        printer(x)
 
 
 @mapped_args

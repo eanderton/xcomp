@@ -31,10 +31,9 @@ class CompilerBase(object):
 
 
 class PreProcessor(CompilerBase):
-    debug = False
-
-    def __init__(self, ctx_manager):
+    def __init__(self, ctx_manager, debug=False):
         self.ctx_manager = ctx_manager
+        self.debug = debug
         self.reset()
 
     def reset(self):
@@ -107,10 +106,9 @@ class SegmentData(object):
 
 
 class Compiler(CompilerBase):
-    debug = False
-
-    def __init__(self, ctx_manager):
+    def __init__(self, ctx_manager, debug=False):
         self.ctx_manager = ctx_manager
+        self.debug = debug
         self.reset()
 
     def reset(self):
