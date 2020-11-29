@@ -97,15 +97,34 @@ class PreProcessor(CompilerBase):
         return self._pre_process(self._parse(ctx_name))
 
 
-@attrs(auto_attribs=True, slots=True)
 class SegmentData(object):
-    offset: int
-    data: list
-    # TODO: provide property to write data here
-    # TODO: capture start/end extents based on write activity
+    def __init__(self, start, end=None):
+        self._start = start
+        self._offset = start
+        self.end = end or start
+
+    @property
+    def start(self):
+        return self._start
+
+    @start.setter
+    def start(self, value):
+        self.end = max(self.end, value)
+        self._start = min(self._start, value)
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = value
+        self.end = max(self.end, value)
+        self._start = min(self._start, value)
 
 
 class Compiler(CompilerBase):
+    #TODO: set segment defaults
     def __init__(self, ctx_manager, debug=False):
         self.ctx_manager = ctx_manager
         self.debug = debug
@@ -115,10 +134,10 @@ class Compiler(CompilerBase):
         self.encoding = 'utf-8'
         self.data = bytearray(0xFFFF)
         self.segments = {
-            'text': SegmentData(0x0800, self.data),
-            'data': SegmentData(0x0200, self.data),
-            'bss':  SegmentData(0x0100, self.data),
-            'zero': SegmentData(0x0000, self.data),
+            'zero': SegmentData(0x0000, 0x0FF),
+            'bss':  SegmentData(0x0100, 0x1FF),
+            'data': SegmentData(0x0200),
+            'text': SegmentData(0x0800),
         }
         self.fixups = []
         self.scope_stack = []

@@ -3,6 +3,7 @@ import hexdump
 import io
 from inspect import cleandoc
 from xcomp.compiler import PreProcessor
+from xcomp.compiler import SegmentData
 from xcomp.compiler import Compiler
 from xcomp.compiler import CompilationError
 from xcomp.decompiler import ModelPrinter
@@ -269,3 +270,31 @@ class StorageTest(TestBase):
         self.assertDataEqual(0x0200, 0x020B, stringbytes('hello world', 'utf-8'))
 
 
+class SegmentTest(TestBase):
+    def test_segment_data(self):
+        d = SegmentData(1000)
+        d.offset += 5 #0x560
+        self.assertEqual(d.start, 1000)
+        self.assertEqual(d.offset, 1005)
+        self.assertEqual(d.end, 1005)
+
+        d = SegmentData(1000, 2000)
+        d.offset += 5 #0x560
+        self.assertEqual(d.start, 1000)
+        self.assertEqual(d.offset, 1005)
+        self.assertEqual(d.end, 2000)
+
+    def test_segment_bounds(self):
+        self.set_file('root.asm', """
+        .data $0300
+        .byte 01, 02, 03, 04, 05
+        .text $0800
+        .byte 01, 02, 03, 04, 05
+        """)
+        self.compile('root.asm')
+        text = self.compiler.segments['text']
+        self.assertEqual(text.start, 0x0800)
+        self.assertEqual(text.end, 0x0805)
+        data = self.compiler.segments['data']
+        self.assertEqual(data.start, 0x0200)
+        self.assertEqual(data.end, 0x0305)

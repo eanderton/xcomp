@@ -39,8 +39,16 @@ def do_compile(ctx_manager, debug, source_file):
     compiler.debug = debug
     compiler.compile(preproc.parse(source_file))
 
-    import hexdump
-    print(hexdump.dump(compiler.data))
+    with printer.underline as p:
+        p.heading('Segment Data').nl()
+    for name, seg in compiler.segments.items():
+        seg = compiler.segments[name]
+        printer.bold(f'{name}: ')
+        printer.text(f'${seg.start:04X}-${seg.end:04X}')
+        printer.newline()
+
+    #import hexdump
+    #print(hexdump.dump(compiler.data))
 
 
 @mapped_args

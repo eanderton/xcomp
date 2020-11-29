@@ -13,7 +13,8 @@ default_stylesheet = {
     'debug': {'color': 'blue', 'italic': True},
     'info': {'color': 'green'},
     'warn': {'color': 'yellow'},
-    'bold': {'bold': 'true'},
+    'bold': {'bold': True},
+    'underline': {'underline': True},
 }
 
 # singleton state for output printer
