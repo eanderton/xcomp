@@ -26,6 +26,20 @@ cli_defaults = {
 # TODO: pretty printing for exceptions
 # TODO: pretty printing on debug messages - use logging?
 
+# TODO: I mean... just look at it.
+def hexdump(src, start=0, end=None, length=16):
+    FILTER = ''.join([(len(repr(chr(x))) == 3) and chr(x) or '.' for x in range(256)])
+    lines = []
+    end = (end or len(src))
+    start -= start % length
+    end -= end % length
+    for c in range(start, end, length):
+        chars = src[c:c+length]
+        hex = ' '.join(["%02x" % x for x in chars])
+        printable = ''.join(["%s" % ((x <= 127 and FILTER[x]) or '.') for x in chars])
+        lines.append("%04x  %-*s  %s\n" % (c, length*3, hex, printable))
+    return ''.join(lines)
+
 @mapped_args
 def do_help(parser, help_topics, topic):
     print(help_topics.get(topic, parser.format_help()))
@@ -47,8 +61,7 @@ def do_compile(ctx_manager, debug, source_file):
         printer.text(f'${seg.start:04X}-${seg.end:04X}')
         printer.newline()
 
-    #import hexdump
-    #print(hexdump.dump(compiler.data))
+    print(hexdump(compiler.data, 0x0800, 0x0900))
 
 
 @mapped_args

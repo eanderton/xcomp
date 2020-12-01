@@ -69,7 +69,7 @@ class TokenList(list):
 class ReduceParser(object):
     debug = False
 
-    def __init__(self, grammar_ebnf, unwrapped_exceptions=None):
+    def __init__(self, grammar, unwrapped_exceptions=None):
         '''
         Creates a new parser around the provided arguments.
 
@@ -80,7 +80,7 @@ class ReduceParser(object):
         makes it hard to process the AST.
         '''
 
-        self.grammar = Grammar(grammar_ebnf)
+        self.grammar = Grammar(grammar)
         self.grammar.unwrapped_exceptions = unwrapped_exceptions or []
 
     def error(self, line, column, context, msg):

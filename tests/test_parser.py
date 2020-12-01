@@ -21,7 +21,7 @@ class ParserTest(unittest.TestCase):
         self.parser = Parser()
         self.ctx = TestExprContext()
 
-    def parse(self, text, rule):
+    def parse(self, text, rule='goal'):
         result = self.parser.parse(text=text, rule=rule)
         print(result)
         #print(self.parser.grammar)
@@ -216,8 +216,14 @@ class MacroTest(ParserTest):
         )
 
     def test_macro_error(self):
-        with self.assertRaisesRegex(Exception,
+        with self.assertRaisesRegex(ParseError,
                 r"<internal> \(1, 7\): expected macro params"):
-            result = self.parse('.macro', 'macro')
+            self.parse('.macro', 'macro')
 
 
+class ExceptionTest(ParserTest):
+    def test_goal_fail(self):
+        with self.assertRaisesRegex(ParseError,
+                r"<internal> \(1, 1\): Invalid syntax. "
+                r"Expected directive, macro, label, or operation"):
+            self.parse('.foobar', 'goal')

@@ -368,7 +368,13 @@ __ignored       = "comment" / ~r".*_tok" / "_"
 class Parser(ReduceParser):
 
     def __init__(self):
-        super().__init__(grammar_ebnf=grammar)
+        super().__init__(grammar=grammar)
+
+    def error_generic(self, e):
+        from parsimonious.exceptions import IncompleteParseError
+        if isinstance(e, IncompleteParseError):
+            return 'Invalid syntax. Expected directive, macro, label, or operation'
+        return super().error_generic(e)
 
     def visit_encoding(self, pos, name):
         return Encoding(pos, name.value)
