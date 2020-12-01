@@ -390,13 +390,11 @@ class Parser(ReduceParser):
 
     ### MACRO ###
 
-    def visit_macro(self, pos, params, fragment):
-        name, *params = tuple(params.names)
-        return Macro(pos, name, params, fragment.body)
-
-    def visit_macro_params(self, pos, param, params=None):
-        rest = params.names if params else []
-        return Params(pos, [param.value] + rest)
+    def visit_macro(self, pos, name, *args): #params, fragment):
+        params = tuple([x.value for x in args[:-1]])
+        fragment = args[-1]
+        print('params', len(params), params)
+        return Macro(pos, name.value, params, fragment.body)
 
     def visit_macro_body(self, pos, *body):
         return Fragment(pos, body)
@@ -404,13 +402,9 @@ class Parser(ReduceParser):
     def visit_label(self, pos, name):
         return Label(pos, name.value)
 
-    def visit_macro_call(self, pos, name, args=None):
-        args = args or Args(Pos(pos.end, pos.end, pos.context))
+    def visit_macro_call(self, pos, name, *args):
+        print('ARGS', args)
         return MacroCall(pos, name.value, args)
-
-    def visit_macro_args(self, pos, argument, args=None):
-        rest = args.values if args else []
-        return Args(pos, [argument] + rest)
 
     ### STORAGE ###
 

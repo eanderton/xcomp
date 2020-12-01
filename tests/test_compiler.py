@@ -11,7 +11,6 @@ from xcomp.parser import Parser
 from xcomp.model import *
 
 
-
 class TestBase(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None

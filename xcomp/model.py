@@ -254,15 +254,6 @@ class ExprName(Expr):
 
 
 @attrs(auto_attribs=True)
-class Params(object):
-    pos: Pos
-    names: List[str] = Factory(list)
-
-    def __str__(self):
-        return ', '.join(self.names)
-
-
-@attrs(auto_attribs=True)
 class Define(Expr):
     pos: Pos
     name: str
@@ -297,29 +288,23 @@ class Fragment(object):
 class Macro(object):
     pos: Pos
     name: str
-    params: Params
-    body: List[Any] = Factory(list)
+    params: tuple
+    body: Fragment
 
     def substitute(self, args):
         ''' Return copy of body with params defined. '''
-        for ii in range(len(args.values)):
+        for ii in range(len(args)):
             name = self.params[ii]
-            yield Define(Pos(0, 0), name, args.values[ii])
+            yield Define(Pos(0, 0), name, args[ii])
         for x in self.body:
             yield x
-
-
-@attrs(auto_attribs=True)
-class Args(object):
-    pos: Pos
-    values: List[Expr] = Factory(list)
 
 
 @attrs(auto_attribs=True)
 class MacroCall(object):
     pos: Pos
     name: str
-    args: Args
+    args: tuple
 
 
 @attrs(auto_attribs=True)

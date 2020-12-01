@@ -192,13 +192,15 @@ class MacroTest(ParserTest):
     def test_macro(self):
         result = self.parse(""".macro foo .endmacro""", 'macro')
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(result.params, [])
+        self.assertEqual(result.params, tuple())
         self.assertEqual(result.body, tuple())
+
+    def test_macro_params(self):
         result = self.parse(""".macro foo, a,b,c
         nop
         .endmacro""", 'macro')
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(result.params, ['a','b','c'])
+        self.assertEqual(result.params, ('a','b','c'))
         print('body:', result.body)
         self.assertEqual(len(result.body), 1)
         self.assertEqual(result.body[0].op.name, 'nop')
@@ -206,11 +208,13 @@ class MacroTest(ParserTest):
     def test_macro_call(self):
         result = self.parse('foo', 'macro_call')
         self.assertEqual(result,
-            MacroCall(Pos(0, 3), 'foo', Args(Pos(3, 3)))
+            MacroCall(Pos(0, 3), 'foo', tuple())
         )
+
+    def test_macro_call_args(self):
         result = self.parse('foo $EA', 'macro_call')
         self.assertEqual(result,
-            MacroCall(Pos(0, 7), 'foo', Args(Pos(4, 7), [
+            MacroCall(Pos(0, 7), 'foo', tuple([
                 ExprValue(Pos(4, 7), 0xEA, 16),
             ]))
         )

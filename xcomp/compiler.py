@@ -76,7 +76,7 @@ class PreProcessor(CompilerBase):
         macro = self.macros.get(call.name, None)
         if not macro:
             self._error(call.pos, f'Macro {call.name} is not defined')
-        if len(call.args.values) != len(macro.params):
+        if len(call.args) != len(macro.params):
             self._error(call.args.pos,
                     f'Invalid number of arguments; expected {len(macro.params)}')
         yield Scope()
