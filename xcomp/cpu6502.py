@@ -85,19 +85,19 @@ addressmode_arg_width = {
 }
 
 opcode_templates = {
-    AddressMode.accumulator: 'A',
+    AddressMode.accumulator: 'a',
     AddressMode.absolute:    '{arg16}',
-    AddressMode.absolute_x:  '{arg16}, X',
-    AddressMode.absolute_y:  '{arg16}, Y',
+    AddressMode.absolute_x:  '{arg16}, x',
+    AddressMode.absolute_y:  '{arg16}, y',
     AddressMode.immediate:   '#{arg8}',
     AddressMode.implied:     '',
     AddressMode.indirect:    '({arg16})',
-    AddressMode.indirect_x:  '({arg8}, X)',
-    AddressMode.indirect_y:  '({arg8}), Y',
+    AddressMode.indirect_x:  '({arg8}, x)',
+    AddressMode.indirect_y:  '({arg8}), y',
     AddressMode.relative:    '{arg8}',
     AddressMode.zeropage:    '{arg8}',
-    AddressMode.zeropage_x:  '{arg8}, X',
-    AddressMode.zeropage_y:  '{arg8}, Y',
+    AddressMode.zeropage_x:  '{arg8}, x',
+    AddressMode.zeropage_y:  '{arg8}, y',
 }
 
 

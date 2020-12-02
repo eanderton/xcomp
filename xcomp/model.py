@@ -314,13 +314,13 @@ class Op(object):
     arg: Expr = None
 
     def __str__(self):
-        if not self.arg:
-            return f'    {self.op.name}'
         args = opcode_templates[self.op.mode].format(**{
             'arg16': str(self.arg),
             'arg8': str(self.arg),
         })
-        return f'    {self.op.name} {args}'
+        if args:
+            args = ' ' + args
+        return f'    {self.op.name}{args}'
 
 
 @attrs(auto_attribs=True)
@@ -346,3 +346,4 @@ class Segment(object):
         if self.start is not None:
             return f'.{self.name} {self.start}'
         return f'.{self.name}'
+

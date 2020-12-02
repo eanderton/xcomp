@@ -27,6 +27,7 @@ class ParserTest(unittest.TestCase):
         #print(self.parser.grammar)
         return result
 
+
 class IgnoredTest(ParserTest):
     def test_ws(self):
         result = self.parse('', 'goal')
@@ -59,6 +60,10 @@ class SegmentTest(ParserTest):
         result = self.parse('.data 0x1234', 'segment')
         self.assertEqual(result.name, 'data')
         self.assertEqual(result.start.value, 0x1234)
+
+    def test_segment_with_label(self):
+        result = self.parse('.data foo:', 'goal')
+        self.assertEqual(result[0].name, 'data')
 
 
 class LabelTest(ParserTest):

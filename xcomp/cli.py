@@ -40,6 +40,7 @@ def hexdump(src, start=0, end=None, length=16):
         lines.append("%04x  %-*s  %s\n" % (c, length*3, hex, printable))
     return ''.join(lines)
 
+
 @mapped_args
 def do_help(parser, help_topics, topic):
     print(help_topics.get(topic, parser.format_help()))
@@ -135,8 +136,10 @@ def main():
 
     # get context manager and call handler
     args['ctx_manager'] = get_ctx_manager(**args)
-    return args['fn'](**args)
-
+    try:
+        return args['fn'](**args)
+    except Exception as e:
+        printer.error(f'Error: {str(e)}')
 
 if __name__ == '__main__':
     result = main()

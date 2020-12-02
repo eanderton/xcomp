@@ -17,7 +17,7 @@ comment         = ~r";\s*.*(?=\n|$)"
 
 include         = include_tok _ string
 
-def             = def_tok _ ident _ expr
+def             = def_tok _ name _ expr
 
 byte_storage    = byte_tok _ storage
 word_storage    = word_tok _ storage
@@ -29,13 +29,14 @@ segment_name    = "zero" / "text" / "data" / "bss"
 encoding        = encoding_tok _ string
 
 macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
-macro_params    = ident _ (comma_tok _ macro_params _)?
+macro_params    = name _ (comma_tok _ macro_params _)?
 macro_body      = core_syntax*
 
-macro_call      = ident _ macro_args?
+macro_call      = name _ macro_args?
 macro_args      = expr _ (comma_tok _ expr _)?
 
 label           = ident colon_tok
+name            = ident !colon_tok
 
 expr16          = bang_tok expr
 
@@ -52,7 +53,7 @@ div             = exp _ slash_tok _ exp
 
 exp             = pow / fact
 pow             = fact carrot_tok fact
-fact            = ident / string / number / group_expr
+fact            = name / string / number / group_expr
 
 group_expr      = lparen_tok _ expr _ rparen_tok
 
@@ -248,11 +249,13 @@ op_ldy_zeropage = ldy_tok _ expr
 op_ldy_zeropage_x = ldy_tok _ expr _ comma_tok _ x_tok
 op_ldy_absolute = ldy_tok _ expr
 op_ldy_absolute_x = ldy_tok _ expr16 _ comma_tok _ x_tok
+
 op_lsr_accumulator = lsr_tok _ a_tok
 op_lsr_zeropage = lsr_tok _ expr
 op_lsr_zeropage_x = lsr_tok _ expr _ comma_tok _ x_tok
 op_lsr_absolute = lsr_tok _ expr
 op_lsr_absolute_x = lsr_tok _ expr16 _ comma_tok _ x_tok
+
 op_nop_implied = _ nop_tok
 op_ora_immediate = ora_tok _ hash_tok _ expr
 op_ora_zeropage = ora_tok _ expr
@@ -390,10 +393,9 @@ class Parser(ReduceParser):
 
     ### MACRO ###
 
-    def visit_macro(self, pos, name, *args): #params, fragment):
+    def visit_macro(self, pos, name, *args):
         params = tuple([x.value for x in args[:-1]])
         fragment = args[-1]
-        print('params', len(params), params)
         return Macro(pos, name.value, params, fragment.body)
 
     def visit_macro_body(self, pos, *body):
@@ -403,7 +405,6 @@ class Parser(ReduceParser):
         return Label(pos, name.value)
 
     def visit_macro_call(self, pos, name, *args):
-        print('ARGS', args)
         return MacroCall(pos, name.value, args)
 
     ### STORAGE ###
