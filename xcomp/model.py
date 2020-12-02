@@ -7,7 +7,6 @@ from typing import *
 from xcomp.reduce_parser import Pos
 from xcomp.reduce_parser import NullPos
 from xcomp.cpu6502 import OpCode
-from xcomp.cpu6502 import opcode_templates
 
 # TODO: move str rendering to decompiler
 # TOOD: move expr visit to compiler
@@ -108,15 +107,12 @@ class Label(Expr):
     def eval(self, ctx):
         return self.addr
 
-    def __str__(self):
-        return f'{self.name}:'
-
-
 
 @attrs(auto_attribs=True)
 class ExprUnaryOp(Expr):
     pos: Pos
     arg: Expr
+    opname = '?'
 
     @abstractmethod
     def oper(self, a):
@@ -125,45 +121,33 @@ class ExprUnaryOp(Expr):
     def eval(self, ctx):
         return self.oper(self.arg.eval(ctx))
 
-
 class Expr8(ExprUnaryOp):
+    opname = ''
     def oper(self, a):
         return a
-
-    def __str__(self):
-        return f'{self.arg}'
-
 
 class Expr16(ExprUnaryOp):
+    opname = '!'
     def oper(self, a):
         return a
-
-    def __str__(self):
-        return f'{self.arg}'
 
 
 class ExprNegate(ExprUnaryOp):
+    opname = '-'
     def oper(self, a):
         return -a
 
-    def __str__(self):
-        return f'-{self.arg}'
-
 
 class ExprLobyte(ExprUnaryOp):
+    opname = '<'
     def oper(self, a):
         return lobyte(a)
 
-    def __str__(self):
-        return f'<{self.arg}'
-
 
 class ExprHibyte(ExprUnaryOp):
+    opname = '>'
     def oper(self, a):
         return hibyte(a)
-
-    def __str__(self):
-        return f'<{self.arg}'
 
 
 @attrs(auto_attribs=True)
@@ -171,52 +155,45 @@ class ExprBinaryOp(Expr):
     pos: Pos
     left: Expr
     right: Expr
+    opname = '?'
 
     def eval(self, ctx):
         return self.oper(self.left.eval(ctx), self.right.eval(ctx))
 
-    def validate(self, ctx):
-        return a.validate(ctx) and b.validate(ctx)
-
 
 class ExprAdd(ExprBinaryOp):
+    opname = '+'
+
     def oper(self, a, b):
         return a + b
 
-    def __str__(self):
-        return f'({self.left} + {self.right})'
-
 
 class ExprSub(ExprBinaryOp):
+    opname = '-'
+
     def oper(self, a, b):
         return a - b
 
-    def __str__(self):
-        return f'({self.left} - {self.right})'
-
 
 class ExprMul(ExprBinaryOp):
+    opname = '*'
+
     def oper(self, a, b):
         return a * b
 
-    def __str__(self):
-        return f'({self.left} * {self.right})'
-
 
 class ExprDiv(ExprBinaryOp):
+    opname = '/'
+
     def oper(self, a, b):
         return a / b
 
-    def __str__(self):
-        return f'({self.left} / {self.right})'
-
 
 class ExprPow(ExprBinaryOp):
+    opname = '^'
+
     def oper(self, a, b):
         return a ^ b
-
-    def __str__(self):
-        return f'({self.left} ^ {self.right})'
 
 
 @attrs(auto_attribs=True)
@@ -224,16 +201,10 @@ class ExprValue(Expr):
     pos: Pos
     value: int
     base: int = 10
+    width: int = 8
 
     def eval(self, ctx):
         return self.value
-
-    def __str__(self):
-        if self.base == 2:
-            return f'%{self.value:b}'
-        if self.base == 16:
-            return f'${self.value:x}'
-        return str(self.value)
 
 
 @attrs(auto_attribs=True)
@@ -249,9 +220,6 @@ class ExprName(Expr):
             return value.eval(ctx)
         return value
 
-    def __str__(self):
-        return self.value
-
 
 @attrs(auto_attribs=True)
 class Define(Expr):
@@ -262,20 +230,13 @@ class Define(Expr):
     def eval(self, ctx):
         return self.expr.eval(ctx)
 
-    def __str__(self):
-        return f'.define {self.name} {self.expr}'
-
 
 class Scope(object):
     pos: Pos = NullPos
-    def __str__(self):
-        return '.scope'
 
 
 class EndScope(object):
     pos: Pos = NullPos
-    def __str__(self):
-        return '.endscope'
 
 
 @attrs(auto_attribs=True)
@@ -313,15 +274,6 @@ class Op(object):
     op: OpCode
     arg: Expr = None
 
-    def __str__(self):
-        args = opcode_templates[self.op.mode].format(**{
-            'arg16': str(self.arg),
-            'arg8': str(self.arg),
-        })
-        if args:
-            args = ' ' + args
-        return f'    {self.op.name}{args}'
-
 
 @attrs(auto_attribs=True)
 class Storage(object):
@@ -329,21 +281,10 @@ class Storage(object):
     width: int
     items: List[int]
 
-    def __str__(self):
-        items = map(str, self.items)
-        if self.width == 1:
-            return '.byte ' + (', '.join(items))
-        return '.word ' + (', '.join(items))
-
 
 @attrs(auto_attribs=True)
 class Segment(object):
     pos: Pos
     name: str
     start: [int, None]
-
-    def __str__(self):
-        if self.start is not None:
-            return f'.{self.name} {self.start}'
-        return f'.{self.name}'
 

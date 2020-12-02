@@ -13,10 +13,10 @@
 ;
 ; Execution time is 69 cycles
 
-.data;
+.data
 seed: .word 0x0000
 
-.text;
+.text
 prng:
 	lda seed+1
 	tax ; store copy of high byte

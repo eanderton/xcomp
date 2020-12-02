@@ -72,7 +72,7 @@ def do_preprocess(ctx_manager, debug, source_file):
     ast = preproc.parse(source_file)
     printer = ModelPrinter(ansimode=not is_piped())
     for x in ast:
-        printer(x)
+        printer.print(x)
 
 
 @mapped_args
@@ -139,6 +139,8 @@ def main():
     try:
         return args['fn'](**args)
     except Exception as e:
+        if args['debug']:
+            raise
         printer.error(f'Error: {str(e)}')
 
 if __name__ == '__main__':

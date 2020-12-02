@@ -84,22 +84,6 @@ addressmode_arg_width = {
     AddressMode.zeropage_y:  1,
 }
 
-opcode_templates = {
-    AddressMode.accumulator: 'a',
-    AddressMode.absolute:    '{arg16}',
-    AddressMode.absolute_x:  '{arg16}, x',
-    AddressMode.absolute_y:  '{arg16}, y',
-    AddressMode.immediate:   '#{arg8}',
-    AddressMode.implied:     '',
-    AddressMode.indirect:    '({arg16})',
-    AddressMode.indirect_x:  '({arg8}, x)',
-    AddressMode.indirect_y:  '({arg8}), y',
-    AddressMode.relative:    '{arg8}',
-    AddressMode.zeropage:    '{arg8}',
-    AddressMode.zeropage_x:  '{arg8}, x',
-    AddressMode.zeropage_y:  '{arg8}, y',
-}
-
 
 @attrs(auto_attribs=True)
 class OpCode(object):
