@@ -27,7 +27,7 @@ class TestBase(unittest.TestCase):
         buf = io.StringIO()
         printer = ModelPrinter(stream=buf, ansimode=False)
         for x in ast:
-            printer(x)
+            printer.print(x)
         buf.seek(0)
         self.assertEqual(buf.read(), cleandoc(ast_text)+'\n')
 
@@ -64,7 +64,7 @@ class PreprocessorTest(TestBase):
                 .text $8000
             start:
                 lda #$80
-                lda <foo
+                lda < foo
             ; <internal>
             .scope
                 .def value 123
