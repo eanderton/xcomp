@@ -47,7 +47,7 @@ class FileContextManager(AbstractContextManager):
     include_paths: list = Factory(list)
     files: Dict = Factory(dict)
 
-    def _search_file(self, filename):
+    def search_file(self, filename):
         for inc in self.include_paths:
             test = os.path.expanduser(os.path.join(inc, filename))
             if os.path.isfile(test):
@@ -56,7 +56,7 @@ class FileContextManager(AbstractContextManager):
 
     def get_text(self, filename):
         if filename not in self.files:
-            full_filename = self._search_file(filename)
+            full_filename = self.search_file(filename)
             if not full_filename:
                 raise FileContextException(
                         f'Cannot find "{filename}" on any configured search path.')
