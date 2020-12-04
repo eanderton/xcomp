@@ -29,6 +29,7 @@ def print_hex(data, start=0, end=0xFFFF, stride=16):
         byte_str = ' '.join([f'{x:02X}' for x in line])
         byte_str += ' '  * ((stride * 3) - len(byte_str))
 
+        type(line)
         utf_filter = lambda ch: chr(ch) if ch > 32 else '.'
         text = ''.join(map(utf_filter, line))
 
