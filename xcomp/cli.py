@@ -29,7 +29,19 @@ def print_hex(data, start=0, end=0xFFFF, stride=16):
         byte_str = ' '.join([f'{x:02X}' for x in line])
         byte_str += ' '  * ((stride * 3) - len(byte_str))
 
-        type(line)
+        #encoding = 'petscii-c64en-uc'
+        #print(type(line), len(line))
+        #print('firstchar', bytes(line[0]))
+        #linechars = []
+        #for ii in range(len(line)):
+        #    ch = line[ii]
+        #    print('ch', ii, ch, bytes([ch]))
+        #    try:
+        #        linechars.append(bytes([ch]).decode('utf-8')) #.encode('utf-8'))
+        #    except:
+        #        linechars.append('.')
+        #print('linechars', linechars) #.encode('utf-8'))
+
         utf_filter = lambda ch: chr(ch) if ch > 32 else '.'
         text = ''.join(map(utf_filter, line))
 
@@ -116,9 +128,17 @@ def do_dump(compiler, extents):
 @fixture('compiler', compile_ast)
 @fixture('extents', get_extents)
 @mapped_args
-def do_compile(compiler, extents, out):
+def do_compile(compiler, extents, out, out_format):
     start, end = extents
-    with open(out) as f:
+    header = None
+
+    if out_format == 'raw':
+        header = bytes([])
+    elif out_format.lower() == 'prg':
+        header = bytes([0x01, 0x08])
+
+    with open(out, 'wb+') as f:
+        f.write(header)
         f.write(compiler.data[start:end])
 
 
@@ -183,6 +203,7 @@ def main():
     compiler_flags.add_argument('-i', '--include', nargs='+', action='extend',
             help='Paths to search for included files')
     compiler_flags.add_argument('-s', '--segment', nargs='*', action='extend',
+            choices=['zero', 'bss', 'data', 'text'],
             help='Segments to emit')
     compiler_flags.add_argument('source_file',
             help='Source file to process')
@@ -191,6 +212,8 @@ def main():
             help='Compile program')
     compiler.add_argument('-o', '--output',
             help='Output file')
+    compiler.add_argument('--out-format', choices=['raw', 'prg'],
+            help='Output format')
     compiler.set_defaults(fn=do_compile, **cli_defaults)
 
     dump = subparsers.add_parser('dump', parents=[flags, compiler_flags],

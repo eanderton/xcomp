@@ -6,6 +6,7 @@ from xcomp.cpu6502 import *
 # TODO: collapse repetition of op parsing into something more sane
 # TODO: add scope/endscope
 # TODO: add .bin <filename> for direct binary include
+# TODO: add .pragma name <expr> for arbitrary metadata
 
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*

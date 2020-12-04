@@ -1,9 +1,6 @@
 .include "c64-const.inc"
 
 ; PRG BASIC stub for LOAD/RUN
-.text
-    .word $0801 ; .PRG header
-
 .text $0801
 LINE_10:
     .word LINE_END

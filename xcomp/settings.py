@@ -36,6 +36,7 @@ cli_defaults = {
     'include': shlex.split(os.environ.get('XCOMP_INCLUDE', f'./ {module_path}/std')),
     'segment': shlex.split(os.environ.get('XCOMP_SEGMENT_OUT', '')),
     'out': os.environ.get('XCOMP_OUT', './out.bin'),
+    'out_format': os.environ.get('XCOMP_OUT_FORMAT', 'raw'),
 }
 
 diff_style = {
