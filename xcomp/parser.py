@@ -41,12 +41,14 @@ name            = ident !colon_tok
 
 expr16          = bang_tok expr
 
-expr            = sub / add / negate / lobyte / hibyte / term
+expr            = sub / add / or / and / negate / lobyte / hibyte / term
 negate          = minus_tok _ term
 lobyte          = lessthan_tok _ term
 hibyte          = morethan_tok _ term
 add             = term _ plus_tok _ expr
-sub             = term _ sub _ expr
+sub             = term _ minus_tok _ expr
+or              = term _ pipe_tok _ expr
+and             = term _ ampersand_tok _ expr
 
 term            = div / mul / exp
 mul             = exp _ asterisk_tok _ exp

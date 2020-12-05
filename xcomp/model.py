@@ -196,6 +196,18 @@ class ExprPow(ExprBinaryOp):
         return a ^ b
 
 
+class ExprOr(ExprBinaryOp):
+    opname = '|'
+
+    def oper(self, a, b):
+        return a | b
+
+class ExprAnd(ExprBinaryOp):
+    opname = '&'
+
+    def oper(self, a, b):
+        return a & b
+
 @attrs(auto_attribs=True)
 class ExprValue(Expr):
     pos: Pos

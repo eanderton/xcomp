@@ -1,4 +1,4 @@
-.include "c64-const.inc"
+.include "std/c64-const.inc"
 
 ; PRG BASIC stub for LOAD/RUN
 .text $0801
