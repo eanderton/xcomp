@@ -40,7 +40,8 @@ macro_args      = expr _ (comma_tok _ expr _)?
 label           = ident colon_tok
 name            = ident !colon_tok
 
-expr16          = bang_tok expr
+#expr16          = bang_tok expr
+expr16          = (bang_tok expr) / expr
 
 expr            = sub / add / or / and / negate / lobyte / hibyte / term
 negate          = minus_tok _ term

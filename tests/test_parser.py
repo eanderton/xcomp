@@ -119,14 +119,17 @@ class OperTest(ParserTest):
         ])
 
     def test_oper(self):
-        self.parser.debug = True
         result = self.parse('nop', 'oper')
         self.assertEqual(result.op.name, 'nop')
 
     def test_arg_precedence(self):
-        self.parser.debug = True
         result = self.parse('sta (<foo),y', 'oper')
         self.assertEqual(result.op.mode, AddressMode.indirect_y)
+
+    def test_jsr(self):
+        self.parser.debug = True
+        result = self.parse('jsr foo', 'oper')
+        self.assertEqual(result.op.mode, AddressMode.absolute)
 
 
 class ExprTest(ParserTest):
