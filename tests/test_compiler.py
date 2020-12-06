@@ -272,16 +272,11 @@ class StorageTest(TestBase):
 class SegmentTest(TestBase):
     def test_segment_data(self):
         d = SegmentData(1000)
+        d.offset += 5 # provoke logging of the start of the segment
         d.offset += 5 #0x560
-        self.assertEqual(d.start, 1000)
-        self.assertEqual(d.offset, 1005)
-        self.assertEqual(d.end, 1005)
-
-        d = SegmentData(1000, 2000)
-        d.offset += 5 #0x560
-        self.assertEqual(d.start, 1000)
-        self.assertEqual(d.offset, 1005)
-        self.assertEqual(d.end, 2000)
+        self.assertEqual(d.start, 1005)
+        self.assertEqual(d.offset, 1010)
+        self.assertEqual(d.end, 1010)
 
     def test_segment_bounds(self):
         self.set_file('root.asm', """
@@ -295,5 +290,5 @@ class SegmentTest(TestBase):
         self.assertEqual(text.start, 0x0800)
         self.assertEqual(text.end, 0x0805)
         data = self.compiler.segments['data']
-        self.assertEqual(data.start, 0x0200)
+        self.assertEqual(data.start, 0x0300)
         self.assertEqual(data.end, 0x0305)

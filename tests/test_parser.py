@@ -41,6 +41,14 @@ class IgnoredTest(ParserTest):
         ''', 'goal')
         self.assertEqual(result, [])
 
+class StatementSeparatorTest(ParserTest):
+    def test_sep_newline(self):
+        # test two back-to-back macro calls
+        result = self.parse('foo\nbar')
+        self.assertEqual(result, [
+            MacroCall(Pos(0, 3), 'foo', tuple()),
+            MacroCall(Pos(4, 7), 'bar', tuple()),
+        ])
 
 class EncodingTest(ParserTest):
     def test_encoding(self):

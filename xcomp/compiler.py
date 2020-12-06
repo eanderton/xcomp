@@ -98,19 +98,23 @@ class PreProcessor(CompilerBase):
 
 
 class SegmentData(object):
-    def __init__(self, start, end=None):
-        self._start = start
-        self._offset = start
-        self.end = end or start
+    def __init__(self, default_start):
+        self._start = None
+        self._default_start = default_start
+        self._end = None
+        self._offset = default_start
 
     @property
     def start(self):
+        if self._start == None:
+            self._start = self._default_start
         return self._start
 
-    @start.setter
-    def start(self, value):
-        self.end = max(self.end, value)
-        self._start = min(self._start, value)
+    @property
+    def end(self):
+        if self._end == None:
+            self._end = self._offset
+        return self._end
 
     @property
     def offset(self):
@@ -119,12 +123,17 @@ class SegmentData(object):
     @offset.setter
     def offset(self, value):
         self._offset = value
-        self.end = max(self.end, value)
-        self._start = min(self._start, value)
+        if self._start == None:
+            self._start = value
+        else:
+            self._start = min(self._start, value)
+        if self._end == None:
+            self._end = value
+        else:
+            self._end = max(self._end, value)
 
 
 class Compiler(CompilerBase):
-    #TODO: set segment defaults
     def __init__(self, ctx_manager, debug=False):
         self.ctx_manager = ctx_manager
         self.debug = debug
@@ -134,8 +143,8 @@ class Compiler(CompilerBase):
         self.encoding = 'utf-8'
         self.data = bytearray(0xFFFF)
         self.segments = {
-            'zero': SegmentData(0x0000, 0x0FF),
-            'bss':  SegmentData(0x0100, 0x1FF),
+            'zero': SegmentData(0x0000),
+            'bss':  SegmentData(0x0100),
             'data': SegmentData(0x0200),
             'text': SegmentData(0x0800),
         }

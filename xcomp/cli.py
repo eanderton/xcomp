@@ -43,8 +43,8 @@ def print_hex(data, start=0, end=0xFFFF, stride=16):
         #print('linechars', linechars) #.encode('utf-8'))
 
         utf_filter = lambda ch: chr(ch) if ch > 32 else '.'
-        text = ''.join(map(utf_filter, line))
-
+        #text = ''.join(map(utf_filter, line))
+        text = ''
         printer.text(f'{line_start:04X}  {byte_str} {text}').nl()
 
 
@@ -257,7 +257,7 @@ def main():
     except Exception as e:
         if args.debug:
             raise
-        printer.error(f'Error: {str(e)}')
+        printer.error(f'Error: {str(e)}').nl()
 
 if __name__ == '__main__':
     result = main()
