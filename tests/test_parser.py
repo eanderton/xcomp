@@ -1,8 +1,7 @@
 import unittest
-from parsimonious.grammar import Grammar
 from xcomp.parser import *
-from xcomp.reduce_parser import ParseError
 from xcomp.model import *
+from xcomp.reduce_parser import ParseError
 
 
 class TestExprContext(ExprContext):
@@ -123,6 +122,11 @@ class OperTest(ParserTest):
         self.parser.debug = True
         result = self.parse('nop', 'oper')
         self.assertEqual(result.op.name, 'nop')
+
+    def test_arg_precedence(self):
+        self.parser.debug = True
+        result = self.parse('sta (<foo),y', 'oper')
+        self.assertEqual(result.op.mode, AddressMode.indirect_y)
 
 
 class ExprTest(ParserTest):

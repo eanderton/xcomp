@@ -23,23 +23,6 @@ class AddressMode(Enum):
     zeropage_y = auto()
     unknown = auto()
 
-# grammar parameter specs by addressing mode
-addressmode_params = {
-    AddressMode.accumulator: ['a_tok'],
-    AddressMode.absolute:    ['expr'],
-    AddressMode.absolute_x:  ['expr16', 'comma_tok', 'x_tok'],
-    AddressMode.absolute_y:  ['expr16', 'comma_tok', 'y_tok'],
-    AddressMode.immediate:   ['hash_tok', 'expr'],
-    AddressMode.implied:     [],
-    AddressMode.indirect:    ['lparen_tok', 'expr', 'rparen_tok'],
-    AddressMode.indirect_x:  ['lparen_tok', 'expr', 'comma_tok', 'x_tok', 'rparen_tok'],
-    AddressMode.indirect_y:  ['lparen_tok', 'expr', 'rparen_tok', 'comma_tok', 'y_tok'],
-    AddressMode.relative:    ['expr'],
-    AddressMode.zeropage:    ['expr'],
-    AddressMode.zeropage_x:  ['expr', 'comma_tok', 'x_tok'],
-    AddressMode.zeropage_y:  ['expr', 'comma_tok', 'y_tok'],
-}
-
 # 8 bit mods that have a 16 bit equivalent
 addressmode_8to16 = {
     AddressMode.absolute:   AddressMode.absolute,
@@ -50,22 +33,6 @@ addressmode_8to16 = {
     AddressMode.zeropage:   AddressMode.absolute,
     AddressMode.zeropage_x: AddressMode.absolute_x,
     AddressMode.zeropage_y: AddressMode.absolute_y,
-}
-
-addressmode_args = {
-    AddressMode.accumulator: 0,
-    AddressMode.absolute:    1,
-    AddressMode.absolute_x:  1,
-    AddressMode.absolute_y:  1,
-    AddressMode.immediate:   1,
-    AddressMode.implied:     0,
-    AddressMode.indirect:    1,
-    AddressMode.indirect_x:  1,
-    AddressMode.indirect_y:  1,
-    AddressMode.relative:    1,
-    AddressMode.zeropage:    1,
-    AddressMode.zeropage_x:  1,
-    AddressMode.zeropage_y:  1,
 }
 
 addressmode_arg_width = {
@@ -101,6 +68,7 @@ class OpCode(object):
     def width(self):
         return 1 + addressmode_arg_width[self.mode]
 
+# TODO: migrate to just the xref and store just the opcode
 opcode_table = (
     OpCode("adc", AddressMode.immediate,   0x69),
     OpCode("adc", AddressMode.zeropage,    0x65),
@@ -259,8 +227,5 @@ opcode_table = (
 opcode_xref = {}
 for op in opcode_table:
     opcode_xref.setdefault(op.name, {})[op.mode] = op
-
-# opcodes by machinecode
-opcode_disasm = {x.value: x for x in opcode_table}
 
 
