@@ -24,7 +24,6 @@ class ParserTest(unittest.TestCase):
     def parse(self, text, rule='goal'):
         result = self.parser.parse(text=text, rule=rule)
         print(result)
-        #print(self.parser.grammar)
         return result
 
 
@@ -112,6 +111,19 @@ class StorageTest(ParserTest):
             ]))
         )
 
+class OperTest(ParserTest):
+    def test_op_nop(self):
+        text = 'nop'
+        result = self.parse(text, 'op_nop')
+        self.assertEqual(result, [
+            Token(Pos(start=0, end=3), text),
+        ])
+
+    def test_oper(self):
+        self.parser.debug = True
+        result = self.parse('nop', 'oper')
+        self.assertEqual(result.op.name, 'nop')
+
 
 class ExprTest(ParserTest):
     def test_negate(self):
@@ -186,13 +198,15 @@ class NumberTest(ParserTest):
 class MacroTest(ParserTest):
     def test_macro_params(self):
         result = self.parse('one', 'macro_params')
-        self.assertEqual(result,
-            Params(Pos(0, 3), ['one']),
-        )
+        self.assertEqual(result, [
+            ExprName(pos=Pos(start=0, end=3, context='<internal>'), value='one'),
+        ])
         result = self.parse('foo, bar, baz', 'macro_params')
-        self.assertEqual(result,
-            Params(Pos(0, 13), ['foo', 'bar', 'baz']),
-        )
+        self.assertEqual(result, [
+            ExprName(pos=Pos(start=0, end=3, context='<internal>'), value='foo'),
+            ExprName(pos=Pos(start=5, end=8, context='<internal>'), value='bar'),
+            ExprName(pos=Pos(start=10, end=13, context='<internal>'), value='baz'),
+        ])
 
     def test_macro(self):
         result = self.parse(""".macro foo .endmacro""", 'macro')
@@ -200,7 +214,8 @@ class MacroTest(ParserTest):
         self.assertEqual(result.params, tuple())
         self.assertEqual(result.body, tuple())
 
-    def test_macro_params(self):
+    def test_macro_params2(self):
+        self.parser.debug = True
         result = self.parse(""".macro foo, a,b,c
         nop
         .endmacro""", 'macro')

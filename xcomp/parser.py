@@ -1,7 +1,8 @@
-from parsimonious.grammar import Grammar, TokenGrammar
-from xcomp.model import *
-from xcomp.reduce_parser import ReduceParser, Token
-from xcomp.cpu6502 import *
+from .model import *
+from .reduce_parser import ReduceParser
+from .reduce_parser import Token
+from .reduce_parser import TokenList
+from .cpu6502 import *
 
 # TODO: collapse repetition of op parsing into something more sane
 # TODO: add scope/endscope
@@ -106,266 +107,76 @@ _               = ~r"\s*"
 a_tok           = "a"
 x_tok           = "x"
 y_tok           = "y"
-adc_tok         = "adc"
-and_tok         = "and"
-asl_tok         = "asl"
-bcc_tok         = "bcc"
-bcs_tok         = "bcs"
-beq_tok         = "beq"
-bit_tok         = "bit"
-bmi_tok         = "bmi"
-bne_tok         = "bne"
-bpl_tok         = "bpl"
-brk_tok         = "brk"
-bvc_tok         = "bvc"
-clc_tok         = "clc"
-cld_tok         = "cld"
-cli_tok         = "cli"
-clv_tok         = "clv"
-cmp_tok         = "cmp"
-cpx_tok         = "cpx"
-cpy_tok         = "cpy"
-dec_tok         = "dec"
-eor_tok         = "eor"
-inc_tok         = "inc"
-inx_tok         = "inx"
-iny_tok         = "iny"
-jmp_tok         = "jmp"
-jsr_tok         = "jsr"
-lda_tok         = "lda"
-ldx_tok         = "ldx"
-ldy_tok         = "ldy"
-lsr_tok         = "lsr"
-nop_tok         = "nop"
-ora_tok         = "ora"
-pha_tok         = "pha"
-php_tok         = "php"
-pla_tok         = "pla"
-plp_tok         = "plp"
-rol_tok         = "rol"
-ror_tok         = "ror"
-rti_tok         = "rti"
-rts_tok         = "rts"
-sbc_tok         = "sbc"
-sec_tok         = "sec"
-sed_tok         = "sed"
-sei_tok         = "sei"
-sta_tok         = "sta"
-stx_tok         = "stx"
-sty_tok         = "sty"
-tax_tok         = "tax"
-tay_tok         = "tay"
-tsx_tok         = "tsx"
-txa_tok         = "txa"
-txs_tok         = "txs"
-tya_tok         = "tya"
+
+# 6502 arg modes
+arg_acc         = a_tok _
+arg_imm         = hash_tok _ expr
+arg_ind         = lparen_tok _ expr16 _ rparen_tok
+arg_ind_x       = lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
+arg_ind_y       = lparen_tok _ expr _ comma_tok _ rparen_tok _ y_tok
+arg_zp          = expr _
+arg_zp_x        = expr _ comma_tok _ x_tok
+arg_zp_y        = expr _ comma_tok _ y_tok
+arg_abs         = expr16 _
+arg_abs_x       = expr16 _ comma_tok _ x_tok
+arg_abs_y       = expr16 _ comma_tok _ y_tok
+arg_rel         = expr _
 
 # 6502 instructions
-op_adc_immediate = adc_tok _ hash_tok _ expr
-op_adc_zeropage = adc_tok _ expr
-op_adc_zeropage_x = adc_tok _ expr _ comma_tok _ x_tok
-op_adc_absolute = adc_tok _ expr
-op_adc_absolute_x = adc_tok _ expr16 _ comma_tok _ x_tok
-op_adc_absolute_y = adc_tok _ expr16 _ comma_tok _ y_tok
-op_adc_indirect_x = adc_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_adc_indirect_y = adc_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_and_immediate = and_tok _ hash_tok _ expr
-op_and_zeropage = and_tok _ expr
-op_and_zeropage_x = and_tok _ expr _ comma_tok _ x_tok
-op_and_absolute = and_tok _ expr
-op_and_absolute_x = and_tok _ expr16 _ comma_tok _ x_tok
-op_and_absolute_y = and_tok _ expr16 _ comma_tok _ y_tok
-op_and_indirect_x = and_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_and_indirect_y = and_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_asl_accumulator = asl_tok _ a_tok
-op_asl_zeropage = asl_tok _ expr
-op_asl_zeropage_x = asl_tok _ expr _ comma_tok _ x_tok
-op_asl_absolute = asl_tok _ expr
-op_asl_absolute_x = asl_tok _ expr16 _ comma_tok _ x_tok
-op_bcc_relative = bcc_tok _ expr
-op_bcs_relative = bcs_tok _ expr
-op_beq_relative = beq_tok _ expr
-op_bit_zeropage = bit_tok _ expr
-op_bit_absolute = bit_tok _ expr
-op_bmi_relative = bmi_tok _ expr
-op_bne_relative = bne_tok _ expr
-op_bpl_relative = bpl_tok _ expr
-op_brk_implied = _ brk_tok
-op_bvc_relative = bvc_tok _ expr
-op_bvc_relative = bvc_tok _ expr
-op_clc_implied = _ clc_tok
-op_cld_implied = _ cld_tok
-op_cli_implied = _ cli_tok
-op_clv_implied = _ clv_tok
-op_cmp_immediate = cmp_tok _ hash_tok _ expr
-op_cmp_zeropage = cmp_tok _ expr
-op_cmp_zeropage_x = cmp_tok _ expr _ comma_tok _ x_tok
-op_cmp_absolute = cmp_tok _ expr
-op_cmp_absolute_x = cmp_tok _ expr16 _ comma_tok _ x_tok
-op_cmp_absolute_y = cmp_tok _ expr16 _ comma_tok _ y_tok
-op_cmp_indirect_x = cmp_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_cmp_indirect_y = cmp_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_cpx_immediate = cpx_tok _ hash_tok _ expr
-op_cpx_zeropage = cpx_tok _ expr
-op_cpx_absolute = cpx_tok _ expr
-op_cpy_immediate = cpy_tok _ hash_tok _ expr
-op_cpy_zeropage = cpy_tok _ expr
-op_cpy_absolute = cpy_tok _ expr
-op_dec_zeropage = dec_tok _ expr
-op_dec_zeropage_x = dec_tok _ expr _ comma_tok _ x_tok
-op_dec_absolute = dec_tok _ expr
-op_dec_absolute_x = dec_tok _ expr16 _ comma_tok _ x_tok
-op_dec_implied = _ dec_tok
-op_dec_implied = _ dec_tok
-op_eor_immediate = eor_tok _ hash_tok _ expr
-op_eor_zeropage = eor_tok _ expr
-op_eor_zeropage_x = eor_tok _ expr _ comma_tok _ x_tok
-op_eor_absolute = eor_tok _ expr
-op_eor_absolute_x = eor_tok _ expr16 _ comma_tok _ x_tok
-op_eor_absolute_y = eor_tok _ expr16 _ comma_tok _ y_tok
-op_eor_indirect_x = eor_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_eor_indirect_y = eor_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_inc_zeropage = inc_tok _ expr
-op_inc_zeropage_x = inc_tok _ expr _ comma_tok _ x_tok
-op_inc_absolute = inc_tok _ expr
-op_inc_absolute_x = inc_tok _ expr16 _ comma_tok _ x_tok
-op_inx_implied = _ inx_tok
-op_iny_implied = _ iny_tok
-op_jmp_absolute = jmp_tok _ expr
-op_jmp_indirect = jmp_tok _ lparen_tok _ expr _ rparen_tok
-op_jsr_absolute = jsr_tok _ expr
-op_lda_immediate = lda_tok _ hash_tok _ expr
-op_lda_zeropage = lda_tok _ expr
-op_lda_zeropage_x = lda_tok _ expr _ comma_tok _ x_tok
-op_lda_absolute = lda_tok _ expr
-op_lda_absolute_x = lda_tok _ expr16 _ comma_tok _ x_tok
-op_lda_absolute_y = lda_tok _ expr16 _ comma_tok _ y_tok
-op_lda_indirect_x = lda_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_lda_indirect_y = lda_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_ldx_immediate = ldx_tok _ hash_tok _ expr
-op_ldx_zeropage = ldx_tok _ expr
-op_ldx_zeropage_y = ldx_tok _ expr _ comma_tok _ y_tok
-op_ldx_absolute = ldx_tok _ expr
-op_ldx_absolute_y = ldx_tok _ expr16 _ comma_tok _ y_tok
-op_ldy_immediate = ldy_tok _ hash_tok _ expr
-op_ldy_zeropage = ldy_tok _ expr
-op_ldy_zeropage_x = ldy_tok _ expr _ comma_tok _ x_tok
-op_ldy_absolute = ldy_tok _ expr
-op_ldy_absolute_x = ldy_tok _ expr16 _ comma_tok _ x_tok
-
-op_lsr_accumulator = lsr_tok _ a_tok
-op_lsr_zeropage = lsr_tok _ expr
-op_lsr_zeropage_x = lsr_tok _ expr _ comma_tok _ x_tok
-op_lsr_absolute = lsr_tok _ expr
-op_lsr_absolute_x = lsr_tok _ expr16 _ comma_tok _ x_tok
-
-op_nop_implied = _ nop_tok
-op_ora_immediate = ora_tok _ hash_tok _ expr
-op_ora_zeropage = ora_tok _ expr
-op_ora_zeropage_x = ora_tok _ expr _ comma_tok _ x_tok
-op_ora_absolute = ora_tok _ expr
-op_ora_absolute_x = ora_tok _ expr16 _ comma_tok _ x_tok
-op_ora_absolute_y = ora_tok _ expr16 _ comma_tok _ y_tok
-op_ora_indirect_x = ora_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_ora_indirect_y = ora_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_pha_implied = _ pha_tok
-op_php_implied = _ php_tok
-op_pla_implied = _ pla_tok
-op_plp_implied = _ plp_tok
-op_rol_accumulator = rol_tok _ a_tok
-op_rol_zeropage = rol_tok _ expr
-op_rol_zeropage_x = rol_tok _ expr _ comma_tok _ x_tok
-op_rol_absolute = rol_tok _ expr
-op_rol_absolute_x = rol_tok _ expr16 _ comma_tok _ x_tok
-op_ror_accumulator = ror_tok _ a_tok
-op_ror_zeropage = ror_tok _ expr
-op_ror_zeropage_x = ror_tok _ expr _ comma_tok _ x_tok
-op_ror_absolute = ror_tok _ expr
-op_ror_absolute_x = ror_tok _ expr16 _ comma_tok _ x_tok
-op_rti_implied = _ rti_tok
-op_rts_implied = _ rts_tok
-op_sbc_immediate = sbc_tok _ hash_tok _ expr
-op_sbc_zeropage = sbc_tok _ expr
-op_sbc_zeropage_x = sbc_tok _ expr _ comma_tok _ x_tok
-op_sbc_absolute = sbc_tok _ expr
-op_sbc_absolute_x = sbc_tok _ expr16 _ comma_tok _ x_tok
-op_sbc_absolute_y = sbc_tok _ expr16 _ comma_tok _ y_tok
-op_sbc_indirect_x = sbc_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_sbc_indirect_y = sbc_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_sec_implied = _ sec_tok
-op_sed_implied = _ sed_tok
-op_sei_implied = _ sei_tok
-op_sta_zeropage = sta_tok _ expr
-op_sta_zeropage_x = sta_tok _ expr _ comma_tok _ x_tok
-op_sta_absolute = sta_tok _ expr
-op_sta_absolute_x = sta_tok _ expr16 _ comma_tok _ x_tok
-op_sta_absolute_y = sta_tok _ expr16 _ comma_tok _ y_tok
-op_sta_indirect_x = sta_tok _ lparen_tok _ expr _ comma_tok _ x_tok _ rparen_tok
-op_sta_indirect_y = sta_tok _ lparen_tok _ expr _ rparen_tok _ comma_tok _ y_tok
-op_stx_zeropage = stx_tok _ expr
-op_stx_zeropage_y = stx_tok _ expr _ comma_tok _ y_tok
-op_stx_absolute = stx_tok _ expr
-op_sty_zeropage = sty_tok _ expr
-op_sty_zeropage_x = sty_tok _ expr _ comma_tok _ x_tok
-op_sty_absolute = sty_tok _ expr
-op_tax_implied = _ tax_tok
-op_tay_implied = _ tay_tok
-op_tsx_implied = _ tsx_tok
-op_txa_implied = _ txa_tok
-op_txs_implied = _ txs_tok
-op_tya_implied = _ tya_tok
-
-# 6502 operations
-oper = op_adc_immediate / op_adc_zeropage / op_adc_zeropage_x /
-       op_adc_absolute / op_adc_absolute_x / op_adc_absolute_y /
-       op_adc_indirect_x / op_adc_indirect_y / op_and_immediate /
-       op_and_zeropage / op_and_zeropage_x / op_and_absolute /
-       op_and_absolute_x / op_and_absolute_y / op_and_indirect_x /
-       op_and_indirect_y / op_asl_accumulator / op_asl_zeropage /
-       op_asl_zeropage_x / op_asl_absolute / op_asl_absolute_x /
-       op_bcc_relative / op_bcs_relative / op_beq_relative /
-       op_bit_zeropage / op_bit_absolute / op_bmi_relative /
-       op_bne_relative / op_bpl_relative / op_brk_implied /
-       op_bvc_relative / op_bvc_relative / op_clc_implied /
-       op_cld_implied / op_cli_implied / op_clv_implied /
-       op_cmp_immediate / op_cmp_zeropage / op_cmp_zeropage_x /
-       op_cmp_absolute / op_cmp_absolute_x / op_cmp_absolute_y /
-       op_cmp_indirect_x / op_cmp_indirect_y / op_cpx_immediate /
-       op_cpx_zeropage / op_cpx_absolute / op_cpy_immediate /
-       op_cpy_zeropage / op_cpy_absolute / op_dec_zeropage /
-       op_dec_zeropage_x / op_dec_absolute / op_dec_absolute_x /
-       op_dec_implied / op_dec_implied / op_eor_immediate /
-       op_eor_zeropage / op_eor_zeropage_x / op_eor_absolute /
-       op_eor_absolute_x / op_eor_absolute_y / op_eor_indirect_x /
-       op_eor_indirect_y / op_inc_zeropage / op_inc_zeropage_x /
-       op_inc_absolute / op_inc_absolute_x / op_inx_implied /
-       op_iny_implied / op_jmp_absolute / op_jmp_indirect /
-       op_jsr_absolute / op_lda_immediate / op_lda_zeropage /
-       op_lda_zeropage_x / op_lda_absolute / op_lda_absolute_x /
-       op_lda_absolute_y / op_lda_indirect_x / op_lda_indirect_y /
-       op_ldx_immediate / op_ldx_zeropage / op_ldx_zeropage_y /
-       op_ldx_absolute / op_ldx_absolute_y / op_ldy_immediate /
-       op_ldy_zeropage / op_ldy_zeropage_x / op_ldy_absolute /
-       op_ldy_absolute_x / op_lsr_accumulator / op_lsr_zeropage /
-       op_lsr_zeropage_x / op_lsr_absolute / op_lsr_absolute_x /
-       op_nop_implied / op_ora_immediate / op_ora_zeropage /
-       op_ora_zeropage_x / op_ora_absolute / op_ora_absolute_x /
-       op_ora_absolute_y / op_ora_indirect_x / op_ora_indirect_y /
-       op_pha_implied / op_php_implied / op_pla_implied / op_plp_implied /
-       op_rol_accumulator / op_rol_zeropage / op_rol_zeropage_x /
-       op_rol_absolute / op_rol_absolute_x / op_ror_accumulator /
-       op_ror_zeropage / op_ror_zeropage_x / op_ror_absolute /
-       op_ror_absolute_x / op_rti_implied / op_rts_implied /
-       op_sbc_immediate / op_sbc_zeropage / op_sbc_zeropage_x /
-       op_sbc_absolute / op_sbc_absolute_x / op_sbc_absolute_y /
-       op_sbc_indirect_x / op_sbc_indirect_y / op_sec_implied /
-       op_sed_implied / op_sei_implied / op_sta_zeropage /
-       op_sta_zeropage_x / op_sta_absolute / op_sta_absolute_x /
-       op_sta_absolute_y / op_sta_indirect_x / op_sta_indirect_y /
-       op_stx_zeropage / op_stx_zeropage_y / op_stx_absolute /
-       op_sty_zeropage / op_sty_zeropage_x / op_sty_absolute /
-       op_tax_implied / op_tay_implied / op_tsx_implied / op_txa_implied /
-       op_txs_implied / op_tya_implied
+op_adc = "adc" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_and = "and" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_asl = "asl" _ (arg_acc / arg_zp / arg_zp_x / arg_abs / arg_abs_x)
+op_bcc = "bcc" _ arg_rel
+op_bcs = "bcs" _ arg_rel
+op_beq = "beq" _ arg_rel
+op_bit = "bit" _ (arg_zp / arg_abs)
+op_bmi = "bmi" _ arg_rel
+op_bne = "bne" _ arg_rel
+op_bpl = "bpl" _ arg_rel
+op_brk = "brk"
+op_bvc = "bvc" _ arg_rel
+op_clc = "clc" _
+op_cld = "cld" _
+op_cli = "cli" _
+op_clv = "clv" _
+op_cmp = "cmp" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_cpx = "cpx" _ (arg_imm / arg_zp / arg_abs)
+op_cpy = "cpy" _ (arg_imm / arg_zp / arg_abs)
+op_dec = "dec" _ (arg_zp / arg_zp_x / arg_abs / arg_abs_x)?
+op_eor = "eor" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_inc = "inc" _ (arg_zp / arg_zp_x / arg_abs / arg_abs_x)
+op_inx = "inx" _
+op_iny = "iny" _
+op_jmp = "jmp" _ (arg_ind / arg_abs)
+op_jsr = "jsr" _ arg_abs
+op_lda = "lda" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_ldx = "ldx" _ (arg_imm / arg_zp / arg_zp_y / arg_abs / arg_abs_y)
+op_ldy = "ldy" _ (arg_imm / arg_zp / arg_zp_x / arg_abs / arg_abs_x)
+op_lsr = "lsr" _ (arg_acc / arg_zp / arg_zp_x / arg_abs / arg_abs_x)
+op_nop = _ "nop" _
+op_ora = "ora" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_pha = "pha" _
+op_php = "php" _
+op_pla = "pla" _
+op_plp = "plp" _
+op_rol = "rol" _ (arg_acc / arg_zp / arg_zp_x / arg_abs / arg_abs_x)
+op_ror = "ror" _ (arg_acc / arg_zp / arg_zp_x / arg_abs / arg_abs_x)
+op_rti = "rti" _
+op_rts = "rts" _
+op_sbc = "sbc" _ (arg_imm / arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_sec = "sec" _
+op_sed = "sed" _
+op_sei = "sei" _
+op_sta = "sta" _ (arg_ind_x / arg_ind_y / arg_zp / arg_zp_x / arg_abs / arg_abs_x / arg_abs_y)
+op_stx = "stx" _ (arg_zp / arg_zp_y / arg_abs)
+op_sty = "sty" _ (arg_zp / arg_zp_x / arg_abs)
+op_tax = "tax" _
+op_tay = "tay" _
+op_tsx = "tsx" _
+op_txa = "txa" _
+op_txs = "txs" _
+op_tya = "tya" _
+oper = op_adc / op_and / op_asl / op_bcc / op_bcs / op_beq / op_bit / op_bmi / op_bne / op_bpl / op_brk / op_bvc / op_clc / op_cld / op_cli / op_clv / op_cmp / op_cpx / op_cpy / op_dec / op_eor / op_inc / op_inx / op_iny / op_jmp / op_jsr / op_lda / op_ldx / op_ldy / op_lsr / op_nop / op_ora / op_pha / op_php / op_pla / op_plp / op_rol / op_ror / op_rti / op_rts / op_sbc / op_sec / op_sed / op_sei / op_sta / op_stx / op_sty / op_tax / op_tay / op_tsx / op_txa / op_txs / op_tya
 
 __ignored       = "comment" / ~r".*_tok" / "_"
 """
@@ -427,6 +238,8 @@ class Parser(ReduceParser):
     visit_hibyte = ExprHibyte
     visit_add = ExprAdd
     visit_sub = ExprSub
+    visit_or = ExprOr
+    visit_and = ExprAnd
     visit_div = ExprDiv
     visit_mul = ExprMul
 
@@ -472,456 +285,41 @@ class Parser(ReduceParser):
 
     ### OP ###
 
-    def visit_op_adc_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.immediate], arg)
+    def visit_arg_acc(self, pos, arg):
+        return TokenList([AddressMode.accumulator, arg])
 
-    def visit_op_adc_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.zeropage], arg)
+    def visit_arg_imm(self, pos, arg):
+        return TokenList([AddressMode.immediate, arg])
 
-    def visit_op_adc_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.zeropage_x], arg)
+    def visit_arg_ind(self, pos, arg):
+        return TokenList([AddressMode.indirect, arg])
 
-    def visit_op_adc_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.absolute], arg)
+    def visit_arg_ind_x(self, pos, arg):
+        return TokenList([AddressMode.indirect_x, arg])
 
-    def visit_op_adc_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.absolute_x], arg)
+    def visit_arg_ind_y(self, pos, arg):
+        return TokenList([AddressMode.indirect_y, arg])
 
-    def visit_op_adc_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.absolute_y], arg)
+    def visit_arg_zp(self, pos, arg):
+        return TokenList([AddressMode.zeropage, arg])
 
-    def visit_op_adc_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.indirect_x], arg)
+    def visit_arg_zp_x(self, pos, arg):
+        return TokenList([AddressMode.zeropage_x, arg])
 
-    def visit_op_adc_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["adc"][AddressMode.indirect_y], arg)
+    def visit_arg_zp_y(self, pos, arg):
+        return TokenList([AddressMode.zeropage_y, arg])
 
-    def visit_op_and_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.immediate], arg)
+    def visit_arg_abs(self, pos, arg):
+        return TokenList([AddressMode.absolute, arg])
 
-    def visit_op_and_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.zeropage], arg)
+    def visit_arg_abs_x(self, pos, arg):
+        return TokenList([AddressMode.absolute_x, arg])
 
-    def visit_op_and_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.zeropage_x], arg)
+    def visit_arg_abs_y(self, pos, arg):
+        return TokenList([AddressMode.absolute_y, arg])
 
-    def visit_op_and_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.absolute], arg)
+    def visit_arg_rel(self, pos, arg):
+        return TokenList([AddressMode.relative, arg])
 
-    def visit_op_and_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.absolute_x], arg)
-
-    def visit_op_and_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.absolute_y], arg)
-
-    def visit_op_and_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.indirect_x], arg)
-
-    def visit_op_and_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["and"][AddressMode.indirect_y], arg)
-
-    def visit_op_asl_accumulator(self, pos, arg=None):
-        return Op(pos, opcode_xref["asl"][AddressMode.accumulator], arg)
-
-    def visit_op_asl_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["asl"][AddressMode.zeropage], arg)
-
-    def visit_op_asl_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["asl"][AddressMode.zeropage_x], arg)
-
-    def visit_op_asl_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["asl"][AddressMode.absolute], arg)
-
-    def visit_op_asl_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["asl"][AddressMode.absolute_x], arg)
-
-    def visit_op_bcc_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bcc"][AddressMode.relative], arg)
-
-    def visit_op_bcs_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bcs"][AddressMode.relative], arg)
-
-    def visit_op_beq_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["beq"][AddressMode.relative], arg)
-
-    def visit_op_bit_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["bit"][AddressMode.zeropage], arg)
-
-    def visit_op_bit_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["bit"][AddressMode.absolute], arg)
-
-    def visit_op_bmi_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bmi"][AddressMode.relative], arg)
-
-    def visit_op_bne_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bne"][AddressMode.relative], arg)
-
-    def visit_op_bpl_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bpl"][AddressMode.relative], arg)
-
-    def visit_op_brk_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["brk"][AddressMode.implied], arg)
-
-    def visit_op_bvc_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bvc"][AddressMode.relative], arg)
-
-    def visit_op_bvc_relative(self, pos, arg=None):
-        return Op(pos, opcode_xref["bvc"][AddressMode.relative], arg)
-
-    def visit_op_clc_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["clc"][AddressMode.implied], arg)
-
-    def visit_op_cld_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["cld"][AddressMode.implied], arg)
-
-    def visit_op_cli_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["cli"][AddressMode.implied], arg)
-
-    def visit_op_clv_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["clv"][AddressMode.implied], arg)
-
-    def visit_op_cmp_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.immediate], arg)
-
-    def visit_op_cmp_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.zeropage], arg)
-
-    def visit_op_cmp_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.zeropage_x], arg)
-
-    def visit_op_cmp_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.absolute], arg)
-
-    def visit_op_cmp_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.absolute_x], arg)
-
-    def visit_op_cmp_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.absolute_y], arg)
-
-    def visit_op_cmp_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.indirect_x], arg)
-
-    def visit_op_cmp_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["cmp"][AddressMode.indirect_y], arg)
-
-    def visit_op_cpx_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["cpx"][AddressMode.immediate], arg)
-
-    def visit_op_cpx_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["cpx"][AddressMode.zeropage], arg)
-
-    def visit_op_cpx_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["cpx"][AddressMode.absolute], arg)
-
-    def visit_op_cpy_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["cpy"][AddressMode.immediate], arg)
-
-    def visit_op_cpy_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["cpy"][AddressMode.zeropage], arg)
-
-    def visit_op_cpy_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["cpy"][AddressMode.absolute], arg)
-
-    def visit_op_dec_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["dec"][AddressMode.zeropage], arg)
-
-    def visit_op_dec_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["dec"][AddressMode.zeropage_x], arg)
-
-    def visit_op_dec_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["dec"][AddressMode.absolute], arg)
-
-    def visit_op_dec_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["dec"][AddressMode.absolute_x], arg)
-
-    def visit_op_dec_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["dec"][AddressMode.implied], arg)
-
-    def visit_op_dec_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["dec"][AddressMode.implied], arg)
-
-    def visit_op_eor_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.immediate], arg)
-
-    def visit_op_eor_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.zeropage], arg)
-
-    def visit_op_eor_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.zeropage_x], arg)
-
-    def visit_op_eor_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.absolute], arg)
-
-    def visit_op_eor_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.absolute_x], arg)
-
-    def visit_op_eor_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.absolute_y], arg)
-
-    def visit_op_eor_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.indirect_x], arg)
-
-    def visit_op_eor_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["eor"][AddressMode.indirect_y], arg)
-
-    def visit_op_inc_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["inc"][AddressMode.zeropage], arg)
-
-    def visit_op_inc_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["inc"][AddressMode.zeropage_x], arg)
-
-    def visit_op_inc_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["inc"][AddressMode.absolute], arg)
-
-    def visit_op_inc_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["inc"][AddressMode.absolute_x], arg)
-
-    def visit_op_inx_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["inx"][AddressMode.implied], arg)
-
-    def visit_op_iny_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["iny"][AddressMode.implied], arg)
-
-    def visit_op_jmp_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["jmp"][AddressMode.absolute], arg)
-
-    def visit_op_jmp_indirect(self, pos, arg=None):
-        return Op(pos, opcode_xref["jmp"][AddressMode.indirect], arg)
-
-    def visit_op_jsr_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["jsr"][AddressMode.absolute], arg)
-
-    def visit_op_lda_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.immediate], arg)
-
-    def visit_op_lda_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.zeropage], arg)
-
-    def visit_op_lda_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.zeropage_x], arg)
-
-    def visit_op_lda_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.absolute], arg)
-
-    def visit_op_lda_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.absolute_x], arg)
-
-    def visit_op_lda_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.absolute_y], arg)
-
-    def visit_op_lda_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.indirect_x], arg)
-
-    def visit_op_lda_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["lda"][AddressMode.indirect_y], arg)
-
-    def visit_op_ldx_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldx"][AddressMode.immediate], arg)
-
-    def visit_op_ldx_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldx"][AddressMode.zeropage], arg)
-
-    def visit_op_ldx_zeropage_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldx"][AddressMode.zeropage_y], arg)
-
-    def visit_op_ldx_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldx"][AddressMode.absolute], arg)
-
-    def visit_op_ldx_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldx"][AddressMode.absolute_y], arg)
-
-    def visit_op_ldy_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldy"][AddressMode.immediate], arg)
-
-    def visit_op_ldy_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldy"][AddressMode.zeropage], arg)
-
-    def visit_op_ldy_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldy"][AddressMode.zeropage_x], arg)
-
-    def visit_op_ldy_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldy"][AddressMode.absolute], arg)
-
-    def visit_op_ldy_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ldy"][AddressMode.absolute_x], arg)
-
-    def visit_op_lsr_accumulator(self, pos, arg=None):
-        return Op(pos, opcode_xref["lsr"][AddressMode.accumulator], arg)
-
-    def visit_op_lsr_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["lsr"][AddressMode.zeropage], arg)
-
-    def visit_op_lsr_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["lsr"][AddressMode.zeropage_x], arg)
-
-    def visit_op_lsr_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["lsr"][AddressMode.absolute], arg)
-
-    def visit_op_lsr_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["lsr"][AddressMode.absolute_x], arg)
-
-    def visit_op_nop_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["nop"][AddressMode.implied], arg)
-
-    def visit_op_ora_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.immediate], arg)
-
-    def visit_op_ora_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.zeropage], arg)
-
-    def visit_op_ora_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.zeropage_x], arg)
-
-    def visit_op_ora_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.absolute], arg)
-
-    def visit_op_ora_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.absolute_x], arg)
-
-    def visit_op_ora_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.absolute_y], arg)
-
-    def visit_op_ora_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.indirect_x], arg)
-
-    def visit_op_ora_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["ora"][AddressMode.indirect_y], arg)
-
-    def visit_op_pha_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["pha"][AddressMode.implied], arg)
-
-    def visit_op_php_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["php"][AddressMode.implied], arg)
-
-    def visit_op_pla_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["pla"][AddressMode.implied], arg)
-
-    def visit_op_plp_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["plp"][AddressMode.implied], arg)
-
-    def visit_op_rol_accumulator(self, pos, arg=None):
-        return Op(pos, opcode_xref["rol"][AddressMode.accumulator], arg)
-
-    def visit_op_rol_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["rol"][AddressMode.zeropage], arg)
-
-    def visit_op_rol_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["rol"][AddressMode.zeropage_x], arg)
-
-    def visit_op_rol_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["rol"][AddressMode.absolute], arg)
-
-    def visit_op_rol_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["rol"][AddressMode.absolute_x], arg)
-
-    def visit_op_ror_accumulator(self, pos, arg=None):
-        return Op(pos, opcode_xref["ror"][AddressMode.accumulator], arg)
-
-    def visit_op_ror_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["ror"][AddressMode.zeropage], arg)
-
-    def visit_op_ror_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ror"][AddressMode.zeropage_x], arg)
-
-    def visit_op_ror_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["ror"][AddressMode.absolute], arg)
-
-    def visit_op_ror_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["ror"][AddressMode.absolute_x], arg)
-
-    def visit_op_rti_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["rti"][AddressMode.implied], arg)
-
-    def visit_op_rts_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["rts"][AddressMode.implied], arg)
-
-    def visit_op_sbc_immediate(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.immediate], arg)
-
-    def visit_op_sbc_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.zeropage], arg)
-
-    def visit_op_sbc_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.zeropage_x], arg)
-
-    def visit_op_sbc_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.absolute], arg)
-
-    def visit_op_sbc_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.absolute_x], arg)
-
-    def visit_op_sbc_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.absolute_y], arg)
-
-    def visit_op_sbc_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.indirect_x], arg)
-
-    def visit_op_sbc_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["sbc"][AddressMode.indirect_y], arg)
-
-    def visit_op_sec_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["sec"][AddressMode.implied], arg)
-
-    def visit_op_sed_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["sed"][AddressMode.implied], arg)
-
-    def visit_op_sei_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["sei"][AddressMode.implied], arg)
-
-    def visit_op_sta_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.zeropage], arg)
-
-    def visit_op_sta_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.zeropage_x], arg)
-
-    def visit_op_sta_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.absolute], arg)
-
-    def visit_op_sta_absolute_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.absolute_x], arg)
-
-    def visit_op_sta_absolute_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.absolute_y], arg)
-
-    def visit_op_sta_indirect_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.indirect_x], arg)
-
-    def visit_op_sta_indirect_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["sta"][AddressMode.indirect_y], arg)
-
-    def visit_op_stx_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["stx"][AddressMode.zeropage], arg)
-
-    def visit_op_stx_zeropage_y(self, pos, arg=None):
-        return Op(pos, opcode_xref["stx"][AddressMode.zeropage_y], arg)
-
-    def visit_op_stx_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["stx"][AddressMode.absolute], arg)
-
-    def visit_op_sty_zeropage(self, pos, arg=None):
-        return Op(pos, opcode_xref["sty"][AddressMode.zeropage], arg)
-
-    def visit_op_sty_zeropage_x(self, pos, arg=None):
-        return Op(pos, opcode_xref["sty"][AddressMode.zeropage_x], arg)
-
-    def visit_op_sty_absolute(self, pos, arg=None):
-        return Op(pos, opcode_xref["sty"][AddressMode.absolute], arg)
-
-    def visit_op_tax_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["tax"][AddressMode.implied], arg)
-
-    def visit_op_tay_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["tay"][AddressMode.implied], arg)
-
-    def visit_op_tsx_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["tsx"][AddressMode.implied], arg)
-
-    def visit_op_txa_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["txa"][AddressMode.implied], arg)
-
-    def visit_op_txs_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["txs"][AddressMode.implied], arg)
-
-    def visit_op_tya_implied(self, pos, arg=None):
-        return Op(pos, opcode_xref["tya"][AddressMode.implied], arg)
-
+    def visit_oper(self, pos, name, mode=AddressMode.implied, arg=None):
+        return Op(pos, opcode_xref[name.text][mode], arg)

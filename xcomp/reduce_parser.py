@@ -118,7 +118,6 @@ class ReduceParser(object):
 
         self.context = context or '<internal>'
         parser = self.grammar if not rule else self.grammar[rule]
-
         try:
             return self.visit(parser.parse(text, pos))
         except exceptions.ParseError as e:
@@ -181,4 +180,4 @@ class ReduceParser(object):
         if fn:
             return fn(Pos.fromNode(node, context=self.context), *values)
         else:
-            return TokenList(values)
+            return values
