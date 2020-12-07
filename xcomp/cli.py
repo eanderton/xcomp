@@ -1,6 +1,7 @@
 # Copyright (c) 2020, Eric Anderton
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
+
 '''
 Xcomp 6502 compiler suite.
 '''
@@ -8,9 +9,9 @@ Xcomp 6502 compiler suite.
 import os
 import sys
 import argparse
-from io import StringIO
-from pragma_utils.decorators import mapped_args
-from pragma_utils.printer import StylePrinter
+import io
+from .printer import StylePrinter
+from .utils import *
 from .settings import *
 from .parser import Parser
 from .compiler import PreProcessor
@@ -19,45 +20,6 @@ from .decompiler import ModelPrinter
 from .model import FileContextManager
 from .model import stringbytes
 
-# singleton state for output printer
-printer = StylePrinter(stylesheet=default_stylesheet)
-
-# TODO: pretty printing on debug messages - use logging?
-# TODO: encoding support for the data
-def print_hex(data, start=0, end=0xFFFF, stride=16):
-    for line_start in range(start, end, stride):
-        line_end = min(line_start + stride, end)
-        line = data[line_start:line_end]
-
-        byte_str = ' '.join([f'{x:02X}' for x in line])
-        byte_str += ' '  * ((stride * 3) - len(byte_str))
-
-        #encoding = 'petscii-c64en-uc'
-        #print(type(line), len(line))
-        #print('firstchar', bytes(line[0]))
-        #linechars = []
-        #for ii in range(len(line)):
-        #    ch = line[ii]
-        #    print('ch', ii, ch, bytes([ch]))
-        #    try:
-        #        linechars.append(bytes([ch]).decode('utf-8')) #.encode('utf-8'))
-        #    except:
-        #        linechars.append('.')
-        #print('linechars', linechars) #.encode('utf-8'))
-
-        utf_filter = lambda ch: chr(ch) if ch > 32 else '.'
-        #text = ''.join(map(utf_filter, line))
-        text = ''
-        printer.text(f'{line_start:04X}  {byte_str} {text}').nl()
-
-
-def fixture(name, handler):
-    def wrapper(fn):
-        def impl(*args, **kwargs):
-            kwargs[name] = handler(*args, **kwargs)
-            return fn(*args, **kwargs)
-        return impl
-    return wrapper
 
 
 @mapped_args
@@ -109,7 +71,7 @@ def get_extents(compiler, segment):
 @fixture('compiler', compile_ast)
 @fixture('extents', get_extents)
 @mapped_args
-def do_dump(compiler, extents):
+def do_dump(printer, compiler, extents):
     start, end = extents
 
     printer.title('Segment Data').nl()
@@ -154,13 +116,13 @@ def do_preprocess(ast):
 
 @fixture('ctx_manager', get_ctx_manager)
 @mapped_args
-def do_fmt(ctx_manager, debug, source_file, test):
+def do_fmt(printer, ctx_manager, trace, source_file, test):
     parser = Parser()
-    parser.debug = debug
+    parser.debug = trace
     text = ctx_manager.get_text(source_file)
     ast = parser.parse(text, context=source_file)
 
-    buf = StringIO()
+    buf = io.StringIO()
     ModelPrinter(buf, ansimode=False).print_ast(ast)
     buf.seek(0)
     result = buf.read()
@@ -245,14 +207,14 @@ def main():
     # parse args and clean up flags
     args = parser.parse_args()
     args.parser = parser
+    args.printer = StylePrinter(stylesheet=default_stylesheet, ansimode=not is_piped())
 
     if args.debug:
+        # TODO: clean this up
         from pprint import pprint
-        pprint(args)
-
-    # turn off ansi color on I/O redirect
-    if is_piped():
-        printer.ansimode = False
+        for k,v in vars(args).items():
+            if k not in ['parser', 'printer', 'fn', 'help_topics']:
+                args.printer.key(k).value(str(v)).nl()
 
     # call handler
     try:
@@ -260,7 +222,8 @@ def main():
     except Exception as e:
         if args.debug:
             raise
-        printer.error(f'Error: {str(e)}').nl()
+        args.printer.error(f'Error: {str(e)}').nl()
+
 
 if __name__ == '__main__':
     result = main()

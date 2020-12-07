@@ -2,10 +2,10 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
-from pragma_utils.printer import StylePrinter
-from xcomp.model import *
-from xcomp.cpu6502 import AddressMode as M
 from functools import singledispatchmethod
+from .printer import StylePrinter
+from .model import *
+from .cpu6502 import AddressMode as M
 
 model_stylesheet = {
     'comment': {'color': 'green'},

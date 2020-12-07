@@ -4,8 +4,8 @@
 
 import os
 import shlex
-from pragma_utils.shims import to_bool
-from pragma_utils.shims import is_piped
+from .utils import to_bool
+from .utils import is_piped
 
 module_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,14 +16,20 @@ default_stylesheet = {
     'title': {'display': 'block', 'color': 'white', 'bold': True, 'underline': True},
     'heading': {'display': 'start', 'padding-top': 1, 'color': 'white', 'bold': True},
     'subheading': {'display': 'start', 'before': '  ', 'after': ' ', 'color': 'yellow'},
-    'on': {'color': 'green'},
-    'off': {'color': 'red'},
+
+    # logging
     'error': {'color': 'red', 'bold': True},
     'debug': {'color': 'blue', 'italic': True},
     'info': {'color': 'green'},
     'warn': {'color': 'yellow'},
     'bold': {'bold': True},
+
+    # misc styles
     'underline': {'underline': True},
+    'on': {'color': 'green'},
+    'off': {'color': 'red'},
+    'key': {'color': 'white', 'bold': True, 'after': ': '},
+    'value': {},
 
     # diff settings
     'removed': {'color': 'red'},
