@@ -1,3 +1,7 @@
+# Copyright (c) 2020, Eric Anderton
+# All rights reserved.
+# Published under the BSD license.  See LICENSE For details.
+
 from pragma_utils.printer import StylePrinter
 from xcomp.model import *
 from xcomp.cpu6502 import AddressMode as M

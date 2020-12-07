@@ -1,3 +1,7 @@
+# Copyright (c) 2020, Eric Anderton
+# All rights reserved.
+# Published under the BSD license.  See LICENSE For details.
+
 import setuptools
 import subprocess
 from setuptools.command.develop import develop

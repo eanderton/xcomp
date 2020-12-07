@@ -1,3 +1,7 @@
+# Copyright (c) 2020, Eric Anderton
+# All rights reserved.
+# Published under the BSD license.  See LICENSE For details.
+
 import codecs
 import cbmcodecs
 from attr import attrib, attrs, Factory

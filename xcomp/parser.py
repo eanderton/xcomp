@@ -1,3 +1,7 @@
+# Copyright (c) 2020, Eric Anderton
+# All rights reserved.
+# Published under the BSD license.  See LICENSE For details.
+
 from .model import *
 from .reduce_parser import ReduceParser
 from .reduce_parser import Token
