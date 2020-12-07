@@ -155,6 +155,7 @@ class Compiler(CompilerBase):
         self.fixups = []
         self.scope_stack = []
         self.seg = self.segments['text']
+        self.pragma = {}
 
     @property
     def scope(self):
@@ -259,14 +260,14 @@ class Compiler(CompilerBase):
     def _compile_define(self, define: Define):
         if define.name in self.scope:
             self._error(define.pos,
-                    f'Identifier "{define.name}" is already defined in scope.')
+                    f'Identifier "{define.name}" is already defined in scope')
         self.scope[define.name] = define
 
     @_compile.register
     def _compile_label(self, label: Label):
         if label.name in self.scope:
             self._error(label.pos,
-                    f'Identifier "{label.name}" is already defined in scope.')
+                    f'Identifier "{label.name}" is already defined in scope')
         self.scope[label.name] = label
         label.addr = self.seg.offset
 

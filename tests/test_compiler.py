@@ -220,6 +220,26 @@ class DefineTest(TestBase):
             0x6D, 0x34, 0x12
         ])
 
+    def test_def_redefine(self):
+        with self.assertRaisesRegex(CompilationError,
+                r'root.asm \(2, 1\): Identifier "foobar" is already defined in scope'):
+            self.set_file('root.asm', """
+            .def foobar $1234
+            .def foobar $5678
+            """)
+            self.compile('root.asm')
+
+
+class LabelTest(TestBase):
+    def test_label_redefine(self):
+        with self.assertRaisesRegex(CompilationError,
+                r'root.asm \(2, 1\): Identifier "foobar" is already defined in scope'):
+            self.set_file('root.asm', """
+            foobar:
+            foobar:
+            """)
+            self.compile('root.asm')
+
 
 class StorageTest(TestBase):
     def test_storage_byte(self):
