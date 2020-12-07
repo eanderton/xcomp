@@ -23,6 +23,22 @@ def is_piped():
     return os.fstat(0) != os.fstat(1)
 
 
+def lobyte(value):
+    return value & 0xFF
+
+
+def hibyte(value):
+    return (value >> 8) & 0xFF
+
+
+def is8bit(value):
+    return lobyte(value) == value
+
+
+def stringbytes(value, encoding):
+    return list([x for x in bytes(value, encoding)])
+
+
 def mapped_args(fn):
     '''
     Function wrapper that only passes kwargs that map to the wrapped function.

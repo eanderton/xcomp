@@ -10,6 +10,7 @@ import os
 import sys
 import argparse
 import io
+import difflib
 from .printer import StylePrinter
 from .utils import *
 from .settings import *
@@ -127,19 +128,18 @@ def do_fmt(printer, ctx_manager, trace, source_file, test):
     buf.seek(0)
     result = buf.read()
 
-    from difflib import ndiff
-
-    diff = ndiff(text.split('\n'), result.split('\n'))
+    # display the diff between the source and the formatted version
+    diff = difflib.ndiff(text.split('\n'), result.split('\n'))
     if diff:
         for line in diff:
             style = diff_style[line[0]]
             printer.write(style, line).nl()
-        return False
-    elif not test:
+    if not test:
+        # rewrite the original file
         real_filename = ctx_manager.search_file(source_file)
         with open(real_filename) as f:
             f.write(result)
-
+    return bool(diff)
 
 def main():
     """

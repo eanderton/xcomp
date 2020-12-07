@@ -8,38 +8,18 @@ from attr import attrib
 from attr import attrs
 from attr import Factory
 from typing import *
-from xcomp.reduce_parser import Pos
-from xcomp.reduce_parser import NullPos
-from xcomp.cpu6502 import OpCode
+from .utils import *
+from .reduce_parser import Pos
+from .reduce_parser import NullPos
+from .cpu6502 import OpCode
 
 # TODO: move str rendering to decompiler
 # TOOD: move expr visit to compiler
-
-def lobyte(value):
-    return value & 0xFF
-
-
-def hibyte(value):
-    return (value >> 8) & 0xFF
-
-
-def is8bit(value):
-    return lobyte(value) == value
-
-
-def stringbytes(value, encoding):
-    return list([x for x in bytes(value, encoding)])
-
 
 class EvalException(Exception):
     def __init__(self, pos, msg):
         self.pos = pos
         super().__init__(msg)
-
-class AbstractContextManager(ABC):
-    @abstractmethod
-    def get_text(self, ctx_name):
-        return None
 
 
 class FileContextException(Exception):
@@ -47,7 +27,7 @@ class FileContextException(Exception):
 
 
 @attrs(auto_attribs=True, slots=True)
-class FileContextManager(AbstractContextManager):
+class FileContextManager():
     include_paths: list = Factory(list)
     files: Dict = Factory(dict)
 

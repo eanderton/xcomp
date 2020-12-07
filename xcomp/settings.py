@@ -7,8 +7,6 @@ import shlex
 from .utils import to_bool
 from .utils import is_piped
 
-module_path = os.path.dirname(os.path.abspath(__file__))
-
 # default settings for styleprinter
 default_stylesheet = {
     'text': {},
@@ -38,7 +36,10 @@ default_stylesheet = {
     'common': {},
 }
 
+# used for path-based cli defaults
+module_path = os.path.dirname(os.path.abspath(__file__))
 
+# command-line option settings with environment var alternatives
 cli_defaults = {
     'no_color': to_bool(os.environ.get('XCOMP_NO_COLOR', 'false')),
     'debug': to_bool(os.environ.get('XCOMP_DEBUG', 'false')),
@@ -49,6 +50,7 @@ cli_defaults = {
     'out_format': os.environ.get('XCOMP_OUT_FORMAT', 'raw'),
 }
 
+# style for diff output
 diff_style = {
     '-': 'removed',
     '+': 'added',
