@@ -30,6 +30,7 @@ setuptools.setup(
     packages=['xcomp'],
     test_suite='tests',
     install_requires=[
+        'ansicolor',
         'cbmcodecs',
     ],
     extras_require={
