@@ -136,11 +136,11 @@ class ModelPrinter(StylePrinter):
     @print.register
     def _print_op(self, op: Op):
         self.print(op.pos)
-        mode = op.op.mode
+        mode = op.mode
         arg = op.arg
 
         # end early if there's no arg, otherwise emit a separator
-        self.opcode(op.op.name)
+        self.opcode(op.name)
         if mode == M.implied:
             return self.nl()
         self.text(' ')

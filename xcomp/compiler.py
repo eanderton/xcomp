@@ -139,8 +139,7 @@ class Compiler(CompilerBase):
                 self._error(expr.pos,
                         f'Expresssion evalutes to {vlen} bytes; operations can only take up to 2.')
             if vlen == 2:
-                opcode = opcode.promote16bits()
-                if not opcode:
+                if not opcode.promote16bits():
                     self._error(expr.pos, f'operation cannot take a 16 bit value')
             # special case: reduce argument to a 8 bit relative offset
             if opcode.mode == AddressMode.relative:
@@ -229,22 +228,20 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_op(self, op: Op):
-        opcode = op.op
         if op.arg:
             try:
                 self.seg.offset += self.resolve_expr(
-                        opcode, self.seg.offset, op.arg)
+                        op, self.seg.offset, op.arg)
             except:
                 # Assume that the arg expression cannot be resolved w/o some
                 # other label defined after this line.  Make the arg width
                 # 16 bits and log a fixup to be resolved later
-                fixup_opcode = opcode.promote16bits() or opcode
-                self.fixups.append([
-                        fixup_opcode, self.seg.offset, op.arg])
-                self.seg.offset += fixup_opcode.width
+                op.promote16bits()
+                self.fixups.append([op, self.seg.offset, op.arg])
+                self.seg.offset += op.width
         else:
-            self.data[self.seg.offset] = opcode.value
-            self.seg.offset += opcode.width
+            self.data[self.seg.offset] = op.value
+            self.seg.offset += op.width
 
     def compile(self, ast):
         self.start_scope()

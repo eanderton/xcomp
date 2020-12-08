@@ -5,7 +5,8 @@
 import unittest
 from xcomp.parser import *
 from xcomp.model import *
-from xcomp.reduce_parser import ParseError
+#from xcomp.reduce_parser import ParseError
+from xcomp.cpu6502 import AddressMode
 
 
 class ParserTest(unittest.TestCase):
@@ -121,16 +122,16 @@ class OperTest(ParserTest):
 
     def test_oper(self):
         result = self.parse('nop', 'oper')
-        self.assertEqual(result.op.name, 'nop')
+        self.assertEqual(result.name, 'nop')
 
     def test_arg_precedence(self):
         result = self.parse('sta (<foo),y', 'oper')
-        self.assertEqual(result.op.mode, AddressMode.indirect_y)
+        self.assertEqual(result.mode, AddressMode.indirect_y)
 
     def test_jsr(self):
         self.parser.debug = True
         result = self.parse('jsr foo', 'oper')
-        self.assertEqual(result.op.mode, AddressMode.absolute)
+        self.assertEqual(result.mode, AddressMode.absolute)
 
 
 class ExprTest(ParserTest):
@@ -227,7 +228,7 @@ class MacroTest(ParserTest):
         self.assertEqual(result.params, ('a','b','c'))
         print('body:', result.body)
         self.assertEqual(len(result.body), 1)
-        self.assertEqual(result.body[0].op.name, 'nop')
+        self.assertEqual(result.body[0].name, 'nop')
 
     def test_macro_call(self):
         result = self.parse('foo', 'macro_call')

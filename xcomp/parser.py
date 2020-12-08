@@ -2,12 +2,13 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+from .cpu6502 import opcode_xref
+from .cpu6502 import AddressMode
 from .model import *
 from .reduce_parser import ReduceParser
 from .reduce_parser import ParseError
 from .reduce_parser import Token
 from .reduce_parser import TokenList
-from .cpu6502 import *
 
 # TODO: collapse repetition of op parsing into something more sane
 # TODO: add .scope/.endscope
@@ -296,7 +297,7 @@ class Parser(ReduceParser):
     ### OP ###
 
     def visit_arg_acc(self, pos):
-        return AddressMode.accumulator
+        return cpu6502.AddressMode.accumulator
 
     def visit_arg_imm(self, pos, arg):
         return TokenList([AddressMode.immediate, arg])
@@ -332,4 +333,5 @@ class Parser(ReduceParser):
         return TokenList([AddressMode.relative, arg])
 
     def visit_oper(self, pos, name, mode=AddressMode.implied, arg=None):
-        return Op(pos, opcode_xref[name.text][mode], arg)
+        name = name.text
+        return Op(pos, name, mode, opcode_xref[name][mode], arg)

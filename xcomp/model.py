@@ -8,10 +8,10 @@ from attr import attrib
 from attr import attrs
 from attr import Factory
 from typing import *
+from .cpu6502 import *
 from .utils import *
 from .reduce_parser import Pos
 from .reduce_parser import NullPos
-from .cpu6502 import OpCode
 
 
 class FileContextException(Exception):
@@ -215,8 +215,23 @@ class MacroCall(object):
 @attrs(auto_attribs=True)
 class Op(object):
     pos: Pos
-    op: OpCode
+    name: str
+    mode: AddressMode
+    value: int
     arg: Expr = None
+
+    def promote16bits(self):
+        new_mode = addressmode_8to16.get(self.mode, None)
+        if new_mode:
+            self.mode = new_mode
+            self.value = opcode_xref[self.name][new_mode]
+            return True
+        return False
+
+    @property
+    def width(self):
+        return 1 + addressmode_arg_width[self.mode]
+
 
 
 @attrs(auto_attribs=True)
