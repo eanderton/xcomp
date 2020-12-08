@@ -6,6 +6,7 @@ import unittest
 import hexdump
 import io
 from inspect import cleandoc
+from xcomp.compiler_base import FileContextManager
 from xcomp.compiler_base import CompilationError
 from xcomp.preprocessor import PreProcessor
 from xcomp.compiler import SegmentData
@@ -13,6 +14,12 @@ from xcomp.compiler import Compiler
 from xcomp.decompiler import ModelPrinter
 from xcomp.parser import Parser
 from xcomp.model import *
+
+# TODO: add .scope/.endscope
+# TODO: add .bin <filename> for direct binary include
+# TODO: add .pragma name <expr> for arbitrary metadata
+# TODO: add .dim for data of N length M init value
+
 
 class TestBase(unittest.TestCase):
     def setUp(self):

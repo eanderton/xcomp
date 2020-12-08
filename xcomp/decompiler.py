@@ -21,6 +21,11 @@ model_stylesheet = {
 }
 
 
+# TODO: add .bin <filename> for direct binary include
+# TODO: add .pragma name <expr> for arbitrary metadata
+# TODO: add .dim for data of N length M init value
+
+
 class ModelPrinter(StylePrinter):
     def __init__(self, stream=None, stylesheet=None, style_defaults=None, ansimode=True):
         stylesheet = stylesheet if stylesheet is not None else model_stylesheet

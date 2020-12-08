@@ -8,6 +8,8 @@ from .parser import Parser
 from .parser import ParseError
 from .compiler_base import CompilerBase
 
+# TODO: add .bin <filename> for direct binary include
+
 class PreProcessor(CompilerBase):
     '''Parses an input file and returns an AST stream representative of the parsed
        file data.

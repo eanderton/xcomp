@@ -2,9 +2,7 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
-import os
 from abc import *
-from attr import attrib
 from attr import attrs
 from attr import Factory
 from typing import *
@@ -14,31 +12,14 @@ from .reduce_parser import Pos
 from .reduce_parser import NullPos
 
 
-class FileContextException(Exception):
+class Expr(ABC):
     pass
 
 
-@attrs(auto_attribs=True, slots=True)
-class FileContextManager():
-    include_paths: list = Factory(list)
-    files: Dict = Factory(dict)
-
-    def search_file(self, filename):
-        for inc in self.include_paths:
-            test = os.path.expanduser(os.path.join(inc, filename))
-            if os.path.isfile(test):
-                return test
-        return None
-
-    def get_text(self, filename):
-        if filename not in self.files:
-            full_filename = self.search_file(filename)
-            if not full_filename:
-                raise FileContextException(
-                        f'Cannot find "{filename}" on any configured search path.')
-            with open(full_filename) as f:
-                self.files[filename] = f.read()
-        return self.files[filename]
+@attrs(auto_attribs=True)
+class Pragma(object):
+    pos: Pos
+    expr: Expr
 
 
 @attrs(auto_attribs=True)
@@ -58,9 +39,10 @@ class Include(object):
     pos: Pos
     filename: String
 
-
-class Expr(ABC):
-    pass
+@attrs(auto_attribs=True)
+class BinaryInclude(object):
+    pos: Pos
+    filename: String
 
 
 @attrs(auto_attribs=True)
@@ -233,7 +215,6 @@ class Op(object):
         return 1 + addressmode_arg_width[self.mode]
 
 
-
 @attrs(auto_attribs=True)
 class Storage(object):
     pos: Pos
@@ -247,3 +228,9 @@ class Segment(object):
     name: str
     start: [int, None]
 
+
+@attrs(auto_attribs=True)
+class Dim(object):
+    pos: Pos
+    length: Expr
+    init: List[Expr] = Factory(list)

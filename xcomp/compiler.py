@@ -49,6 +49,8 @@ class SegmentData(object):
             self._end = max(self._end, value)
 
 
+# TODO: add .pragma name <expr> for arbitrary metadata
+# TODO: add .dim for data of N length M init value
 class Compiler(CompilerBase):
     def __init__(self, ctx_manager, debug=False):
         super().__init__(ctx_manager)

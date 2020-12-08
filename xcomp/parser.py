@@ -10,17 +10,12 @@ from .reduce_parser import ParseError
 from .reduce_parser import Token
 from .reduce_parser import TokenList
 
-# TODO: collapse repetition of op parsing into something more sane
-# TODO: add .scope/.endscope
-# TODO: add .bin <filename> for direct binary include
-# TODO: add .pragma name <expr> for arbitrary metadata
-# TODO: add .dim for data of N length M init value
-
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  encoding / label / oper / macro_call / eol_tok / _
+                  encoding / scope / endscope / dim / bin /pragma /
+                  label / oper / macro_call / eol_tok / _
 
 comment         = ~r";\s*.*(?=\n|$)"
 
@@ -36,6 +31,13 @@ segment         = period_tok segment_name (sp expr)?
 segment_name    = "zero" / "text" / "data" / "bss"
 
 encoding        = encoding_tok _ string
+
+scope           = scope_tok _
+endscope        = endscope_tok _
+
+dim             = dim_tok sp expr _ (comma_tok _ expr)*
+bin             = bin_tok _ string
+pragma          = pragma_tok _ name _ expr
 
 macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
 macro_params    = name _ (comma_tok _ macro_params _)?
@@ -85,6 +87,11 @@ encoding_tok    = ".encoding"
 byte_tok        = ".byte"
 word_tok        = ".word"
 include_tok     = ".include"
+scope_tok       = ".scope"
+endscope_tok    = ".endscope"
+bin_tok         = ".bin"
+dim_tok         = ".dim"
+pragma_tok      = ".pragma"
 def_tok         = ".def"
 macro_tok       = ".macro"
 endmacro_tok    = ".endmacro"
@@ -133,38 +140,44 @@ arg_abs_y       = sp expr16 _ comma_tok _ y_tok
 arg_rel         = sp expr _
 
 # 6502 instructions
-op_adc = "adc" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
-op_and = "and" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_adc = "adc" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+                arg_abs_y / arg_abs)
+op_and = "and" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+                arg_abs_y / arg_abs)
 op_asl = "asl" (arg_acc / arg_zp_x / arg_zp / arg_abs_x / arg_abs)
-op_bcc = "bcc" (arg_rel)
-op_bcs = "bcs" (arg_rel)
-op_beq = "beq" (arg_rel)
+op_bcc = "bcc" arg_rel
+op_bcs = "bcs" arg_rel
+op_beq = "beq" arg_rel
 op_bit = "bit" (arg_zp / arg_abs)
-op_bmi = "bmi" (arg_rel)
-op_bne = "bne" (arg_rel)
-op_bpl = "bpl" (arg_rel)
+op_bmi = "bmi" arg_rel
+op_bne = "bne" arg_rel
+op_bpl = "bpl" arg_rel
 op_brk = "brk"
-op_bvc = "bvc" (arg_rel)
+op_bvc = "bvc" arg_rel
 op_clc = "clc"
 op_cld = "cld"
 op_cli = "cli"
 op_clv = "clv"
-op_cmp = "cmp" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_cmp = "cmp" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+               arg_abs_y / arg_abs)
 op_cpx = "cpx" (arg_imm / arg_zp / arg_abs)
 op_cpy = "cpy" (arg_imm / arg_zp / arg_abs)
 op_dec = "dec" (arg_zp_x / arg_zp / arg_abs_x / arg_abs)?
-op_eor = "eor" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_eor = "eor" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+                arg_abs_y / arg_abs)
 op_inc = "inc" (arg_zp_x / arg_zp / arg_abs_x / arg_abs)
 op_inx = "inx"
 op_iny = "iny"
 op_jmp = "jmp" (arg_ind / arg_abs)
-op_jsr = "jsr" (arg_abs)
-op_lda = "lda" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_jsr = "jsr" arg_abs
+op_lda = "lda" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+                arg_abs_y / arg_abs)
 op_ldx = "ldx" (arg_imm / arg_zp_y / arg_zp / arg_abs_y / arg_abs)
 op_ldy = "ldy" (arg_imm / arg_zp_x / arg_zp / arg_abs_x / arg_abs)
 op_lsr = "lsr" (arg_acc / arg_zp_x / arg_zp / arg_abs_x / arg_abs)
 op_nop = "nop"
-op_ora = "ora" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_ora = "ora" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+                arg_abs_y / arg_abs)
 op_pha = "pha"
 op_php = "php"
 op_pla = "pla"
@@ -173,11 +186,13 @@ op_rol = "rol" (arg_acc / arg_zp_x / arg_zp / arg_abs_x / arg_abs)
 op_ror = "ror" (arg_acc / arg_zp_x / arg_zp / arg_abs_x / arg_abs)
 op_rti = "rti"
 op_rts = "rts"
-op_sbc = "sbc" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_sbc = "sbc" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
+                arg_abs_y / arg_abs)
 op_sec = "sec"
 op_sed = "sed"
 op_sei = "sei"
-op_sta = "sta" (arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y / arg_abs)
+op_sta = "sta" (arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x / arg_abs_y /
+                arg_abs)
 op_stx = "stx" (arg_zp_y / arg_zp / arg_abs)
 op_sty = "sty" (arg_zp_x / arg_zp / arg_abs)
 op_tax = "tax"
@@ -187,7 +202,13 @@ op_txa = "txa"
 op_txs = "txs"
 op_tya = "tya"
 
-oper = op_adc / op_and / op_asl / op_bcc / op_bcs / op_beq / op_bit / op_bmi / op_bne / op_bpl / op_brk / op_bvc / op_clc / op_cld / op_cli / op_clv / op_cmp / op_cpx / op_cpy / op_dec / op_eor / op_inc / op_inx / op_iny / op_jmp / op_jsr / op_lda / op_ldx / op_ldy / op_lsr / op_nop / op_ora / op_pha / op_php / op_pla / op_plp / op_rol / op_ror / op_rti / op_rts / op_sbc / op_sec / op_sed / op_sei / op_sta / op_stx / op_sty / op_tax / op_tay / op_tsx / op_txa / op_txs / op_tya
+oper = op_adc / op_and / op_asl / op_bcc / op_bcs / op_beq / op_bit / op_bmi /
+       op_bne / op_bpl / op_brk / op_bvc / op_clc / op_cld / op_cli / op_clv /
+       op_cmp / op_cpx / op_cpy / op_dec / op_eor / op_inc / op_inx / op_iny /
+       op_jmp / op_jsr / op_lda / op_ldx / op_ldy / op_lsr / op_nop / op_ora /
+       op_pha / op_php / op_pla / op_plp / op_rol / op_ror / op_rti / op_rts /
+       op_sbc / op_sec / op_sed / op_sei / op_sta / op_stx / op_sty / op_tax /
+       op_tay / op_tsx / op_txa / op_txs / op_tya
 
 __ignored       = "comment" / ~r".*_tok" / "sp" / "_"
 """
@@ -204,6 +225,9 @@ class Parser(ReduceParser):
             return 'Invalid syntax. Expected directive, macro, label, or operation'
         return super().error_generic(e)
 
+    def visit_pragma(self, pos, name, expr):
+        return Pragma(pos, name.value, expr)
+
     def visit_encoding(self, pos, name):
         return Encoding(pos, name.value)
 
@@ -213,8 +237,11 @@ class Parser(ReduceParser):
     def visit_include(self, pos, filename):
         return Include(pos, filename.value)
 
-    def visit_def(self, pos, name, expr):
-        return Define(pos, name.value, expr)
+    def visit_bin(self, pos, filename):
+        return BinaryInclude(pos, filename.value)
+
+    visit_scope = Scope
+    visit_endscope = EndScope
 
     ### MACRO ###
 
@@ -240,7 +267,16 @@ class Parser(ReduceParser):
     def visit_word_storage(self, pos, *exprs):
         return Storage(pos, 2, exprs)
 
+    def visit_dim(self, pos, length, *exprs):
+        return Dim(pos, length, exprs)
+
     ### EXPRESSIONS ###
+
+    def visit_def(self, pos, name, expr):
+        return Define(pos, name.value, expr)
+
+    def visit_ident(self, pos, lit):
+        return ExprName(pos, lit.text)
 
     visit_expr8 = Expr8
     visit_expr16 = Expr16
@@ -288,11 +324,6 @@ class Parser(ReduceParser):
 
     def visit_base10(self, pos, lit):
         return ExprValue(pos, int(lit.text, base=10), 10)
-
-    ### EXPR ###
-
-    def visit_ident(self, pos, lit):
-        return ExprName(pos, lit.text)
 
     ### OP ###
 
