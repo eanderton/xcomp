@@ -1,6 +1,7 @@
 .include "std/c64-const.inc"
 
 ; PRG BASIC stub for LOAD/RUN
+.pragma c64_prg_start $0801
 .text $0801
 LINE_10:
     .word LINE_END
@@ -9,6 +10,3 @@ LINE_10:
     .byte $00 ; EOL
 LINE_END:
     .word $0000 ; end of BASIC program (next line is $0000)
-MAIN_START: ; $080E
-    lda #$1F
-    sta $0000 ; mode 31 - RAM, I/O, and KERNAL (no BASIC)

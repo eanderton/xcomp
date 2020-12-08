@@ -15,10 +15,10 @@ from .printer import StylePrinter
 from .utils import *
 from .settings import *
 from .parser import Parser
-from .compiler import PreProcessor
+from .preprocessor import PreProcessor
+from .compiler_base import FileContextManager
 from .compiler import Compiler
 from .decompiler import ModelPrinter
-from .model import FileContextManager
 from .model import stringbytes
 
 
@@ -86,7 +86,7 @@ def do_dump(printer, compiler, extents):
     printer.title('Hex Dump').nl()
     printer.text(f'Range: ${start:04X}-${end:04X}')
     printer.text(f' - Size: ${end-start:04X} ({end-start}) bytes').nl()
-    print_hex(compiler.data, start, end)
+    print_hex(printer, compiler.data, start, end)
 
 
 @fixture('ctx_manager', get_ctx_manager)
@@ -101,7 +101,8 @@ def do_compile(compiler, extents, out, out_format):
     if out_format == 'raw':
         header = bytes([])
     elif out_format.lower() == 'prg':
-        header = bytes([0x01, 0x08])
+        start_addr = compiler.pragma.get('c64_prg_start', 0x0801)
+        header = intbytes(start_addr)
 
     with open(out, 'wb+') as f:
         f.write(header)

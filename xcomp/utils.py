@@ -39,6 +39,10 @@ def stringbytes(value, encoding):
     return list([x for x in bytes(value, encoding)])
 
 
+def intbytes(value):
+    return bytes([lobyte(value), hibyte(value)])
+
+
 def mapped_args(fn):
     '''
     Function wrapper that only passes kwargs that map to the wrapped function.
@@ -64,7 +68,7 @@ def fixture(name, handler):
 
 # TODO: pretty printing on debug messages - use logging?
 # TODO: encoding support for the data
-def print_hex(data, start=0, end=0xFFFF, stride=16):
+def print_hex(printer, data, start=0, end=0xFFFF, stride=16):
     for line_start in range(start, end, stride):
         line_end = min(line_start + stride, end)
         line = data[line_start:line_end]

@@ -330,7 +330,7 @@ class Parser(ReduceParser):
     ### OP ###
 
     def visit_arg_acc(self, pos):
-        return cpu6502.AddressMode.accumulator
+        return AddressMode.accumulator
 
     def visit_arg_imm(self, pos, arg):
         return TokenList([AddressMode.immediate, arg])

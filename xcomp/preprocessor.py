@@ -7,6 +7,8 @@ from .model import *
 from .parser import Parser
 from .parser import ParseError
 from .compiler_base import CompilerBase
+from .compiler_base import FileContextException
+
 
 class PreProcessor(CompilerBase):
     '''Parses an input file and returns an AST stream representative of the parsed
