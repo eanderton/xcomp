@@ -10,6 +10,8 @@ from .reduce_parser import ParseError
 from .reduce_parser import Token
 from .reduce_parser import TokenList
 
+# TODO: add support for associating end-line comments with a statement
+# TODO: somehow detect and store "whole-line" comments
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 

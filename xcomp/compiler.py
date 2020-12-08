@@ -49,8 +49,6 @@ class SegmentData(object):
             self._end = max(self._end, value)
 
 
-# TODO: add .pragma name <expr> for arbitrary metadata
-# TODO: add .dim for data of N length M init value
 class Compiler(CompilerBase):
     def __init__(self, ctx_manager, debug=False):
         super().__init__(ctx_manager)
@@ -115,7 +113,7 @@ class Compiler(CompilerBase):
     def _eval_string(self, expr:String):
         return expr.value
 
-    def resolve_expr(self, opcode, addr, expr):
+    def get_expr_bytes(self, expr):
         value = self.eval(expr)
         if isinstance(value, int):
             if is8bit(value):
@@ -129,8 +127,11 @@ class Compiler(CompilerBase):
                 self._error(expr.pos, str(e))
         else:
             self._error(expr.pos, f'value of type {type(value)} not supported.')
-        vlen = len(expr_bytes)
+        return value, expr_bytes
 
+    def resolve_expr(self, opcode, addr, expr):
+        value, expr_bytes = self.get_expr_bytes(expr)
+        vlen = len(expr_bytes)
         if self.debug:
             print('expr bytes', f'${addr:x}', vlen, ' '.join([f'{x:x}' for x in expr_bytes]))
 
@@ -140,9 +141,6 @@ class Compiler(CompilerBase):
             if vlen > 2:
                 self._error(expr.pos,
                         f'Expresssion evalutes to {vlen} bytes; operations can only take up to 2.')
-            if vlen == 2:
-                if not opcode.promote16bits():
-                    self._error(expr.pos, f'operation cannot take a 16 bit value')
             # special case: reduce argument to a 8 bit relative offset
             if opcode.mode == AddressMode.relative:
                 jmp = (value - (addr + 2))
@@ -151,6 +149,9 @@ class Compiler(CompilerBase):
                             f'Relative jump for {opcode.name} is out of range.')
                 expr_bytes = [jmp & 0xFF]
                 vlen = 1
+            elif vlen == 2:
+                if not opcode.promote16bits():
+                    self._error(expr.pos, f'operation cannot take a 16 bit value')
             # emit op byte
             self.data[addr] = opcode.value
             addr += 1
@@ -180,6 +181,10 @@ class Compiler(CompilerBase):
     @singledispatchmethod
     def _compile(self, item):
         raise Exception(f'no defined compile handler for item: {type(item)}')
+
+    @_compile.register
+    def _compile_pragma(self, pragma: Pragma):
+        self.pragma[pragma.name] = self.eval(pragma.expr)
 
     @_compile.register
     def _compile_encoding(self, encoding: Encoding):
@@ -221,6 +226,21 @@ class Compiler(CompilerBase):
             except Exception as e:
                 self.fixups.append(fixup)
             self.seg.offset += storage.width
+
+    # TODO: patch to work with forward references
+    @_compile.register
+    def _compile_dim(self, dim: Dim):
+        length = self.eval(dim.length)
+        init_bytes = []
+        for item in dim.init:
+            _, expr_bytes = self.get_expr_bytes(item)
+            init_bytes.extend(expr_bytes)
+        init_len = len(init_bytes)
+        end = self.seg.offset + length
+        for ii in range(self.seg.offset, end, init_len):
+            self.data[ii:ii+init_len] = init_bytes
+        self.data[ii:end] = init_bytes[0:end-ii]
+        self.seg.offset += length
 
     @_compile.register
     def _compile_segment(self, segment: Segment):

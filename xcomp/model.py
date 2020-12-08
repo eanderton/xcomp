@@ -19,6 +19,7 @@ class Expr(ABC):
 @attrs(auto_attribs=True)
 class Pragma(object):
     pos: Pos
+    name: str
     expr: Expr
 
 

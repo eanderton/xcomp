@@ -15,11 +15,7 @@ from xcomp.decompiler import ModelPrinter
 from xcomp.parser import Parser
 from xcomp.model import *
 
-# TODO: add .scope/.endscope
 # TODO: add .bin <filename> for direct binary include
-# TODO: add .pragma name <expr> for arbitrary metadata
-# TODO: add .dim for data of N length M init value
-
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -152,6 +148,30 @@ class CompilerTest(TestBase):
         self.compile('root.asm')
         self.assertDataEqual(0x0800, 0x0803, [
             0xEA, 0x90, 0xFD,
+        ])
+
+    def test_pragma(self):
+        self.set_file('root.asm', """
+        .pragma foobar "baz"
+        .pragma gorf 0x1234
+        """)
+        self.compile('root.asm')
+        self.assertEqual(self.compiler.pragma['foobar'], 'baz')
+        self.assertEqual(self.compiler.pragma['gorf'], 0x1234)
+
+    def test_scope(self):
+        self.set_file('root.asm', """
+        .data 0x0200
+        .def foo $5678
+        .scope
+        .def foo $1234
+        .word foo
+        .endscope
+        .word foo
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0204, [
+            0x34, 0x12, 0x78, 0x56,
         ])
 
 
@@ -298,6 +318,16 @@ class StorageTest(TestBase):
         self.compile('root.asm')
         self.assertDataEqual(0x0200, 0x020B, stringbytes('hello world', 'utf-8'))
 
+
+    def test_dim(self):
+        self.set_file('root.asm', """
+        .data 0x0200
+        .dim 13, 1,2,3
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x020D, [
+            1,2,3, 1,2,3, 1,2,3, 1,2,3, 1
+        ])
 
 class SegmentTest(TestBase):
     def test_segment_data(self):
