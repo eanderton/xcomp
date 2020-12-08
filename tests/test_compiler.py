@@ -6,14 +6,13 @@ import unittest
 import hexdump
 import io
 from inspect import cleandoc
-from xcomp.compiler import PreProcessor
+from xcomp.compiler_base import CompilationError
+from xcomp.preprocessor import PreProcessor
 from xcomp.compiler import SegmentData
 from xcomp.compiler import Compiler
-from xcomp.compiler import CompilationError
 from xcomp.decompiler import ModelPrinter
 from xcomp.parser import Parser
 from xcomp.model import *
-
 
 class TestBase(unittest.TestCase):
     def setUp(self):

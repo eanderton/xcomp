@@ -4,6 +4,7 @@
 
 from .model import *
 from .reduce_parser import ReduceParser
+from .reduce_parser import ParseError
 from .reduce_parser import Token
 from .reduce_parser import TokenList
 from .cpu6502 import *
