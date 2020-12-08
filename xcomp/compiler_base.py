@@ -23,13 +23,14 @@ class FileContextManager():
                 return test
         return None
 
-    def get_text(self, filename):
+    # TODO: rename to get_data()
+    def get_text(self, filename, mode='rt'):
         if filename not in self.files:
             full_filename = self.search_file(filename)
             if not full_filename:
                 raise FileContextException(
                         f'Cannot find "{filename}" on any configured search path.')
-            with open(full_filename) as f:
+            with open(full_filename, mode) as f:
                 self.files[filename] = f.read()
         return self.files[filename]
 

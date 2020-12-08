@@ -43,7 +43,7 @@ class Include(object):
 @attrs(auto_attribs=True)
 class BinaryInclude(object):
     pos: Pos
-    filename: String
+    filename: str
 
 
 @attrs(auto_attribs=True)

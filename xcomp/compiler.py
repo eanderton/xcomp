@@ -183,6 +183,14 @@ class Compiler(CompilerBase):
         raise Exception(f'no defined compile handler for item: {type(item)}')
 
     @_compile.register
+    def _compile_bin(self, binfile: BinaryInclude):
+        value = self.ctx_manager.get_text(binfile.filename, 'rb')
+        start = self.seg.offset
+        end = start + len(value)
+        self.data[start:end] = value
+        self.seg.offset = end
+
+    @_compile.register
     def _compile_pragma(self, pragma: Pragma):
         self.pragma[pragma.name] = self.eval(pragma.expr)
 

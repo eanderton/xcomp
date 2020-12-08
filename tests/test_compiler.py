@@ -15,7 +15,6 @@ from xcomp.decompiler import ModelPrinter
 from xcomp.parser import Parser
 from xcomp.model import *
 
-# TODO: add .bin <filename> for direct binary include
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -27,7 +26,10 @@ class TestBase(unittest.TestCase):
         self.compiler.debug = True
 
     def set_file(self, name, text):
-        self.ctx_manager.files[name] = cleandoc(text)
+        print(type(text))
+        if isinstance(text, str):
+            text = cleandoc(text)
+        self.ctx_manager.files[name] = text
 
     def assertAstEqual(self, ast, ast_text):
         buf = io.StringIO()
@@ -328,6 +330,18 @@ class StorageTest(TestBase):
         self.assertDataEqual(0x0200, 0x020D, [
             1,2,3, 1,2,3, 1,2,3, 1,2,3, 1
         ])
+
+    def test_bin(self):
+        self.set_file('root.asm', """
+        .data 0x0200
+        .bin "foobar.dat"
+        """)
+        self.set_file('foobar.dat', bytearray([1,2,3,4]))
+        self.compile('root.asm')
+        self.assertDataEqual(0x0200, 0x0204, [
+            0x01, 0x02, 0x03, 0x04
+        ])
+
 
 class SegmentTest(TestBase):
     def test_segment_data(self):
