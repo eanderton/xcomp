@@ -8,21 +8,10 @@ from xcomp.model import *
 from xcomp.reduce_parser import ParseError
 
 
-class TestExprContext(ExprContext):
-    __test__ = False
-
-    def __init__(self, names=None):
-        self.names = names or {}
-
-    def resolve(self, label_name):
-        return self.names[label_name]
-
-
 class ParserTest(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
         self.parser = Parser()
-        self.ctx = TestExprContext()
 
     def parse(self, text, rule='goal'):
         result = self.parser.parse(text=text, rule=rule)
@@ -150,7 +139,6 @@ class ExprTest(ParserTest):
         self.assertEqual(result, ExprNegate(Pos(0, 3),
             ExprValue(Pos(1, 3), 42),
         ))
-        self.assertEqual(result.eval(None), -42)
 
     def test_add(self):
         result = self.parse('3 + 4', 'add')
@@ -158,7 +146,6 @@ class ExprTest(ParserTest):
             ExprValue(Pos(0, 1), 3),
             ExprValue(Pos(4, 5), 4),
         ))
-        self.assertEqual(result.eval(None), 7)
 
     def test_lobyte(self):
         result = self.parse('<33', 'lobyte')
@@ -176,8 +163,6 @@ class ExprTest(ParserTest):
             ExprValue(Pos(0, 1), 2),
             ExprName(Pos(4, 7), 'foo'),
         ))
-        ctx = TestExprContext({'foo': 7})
-        self.assertEqual(result.eval(ctx), 14)
 
 
 class StringTest(ParserTest):

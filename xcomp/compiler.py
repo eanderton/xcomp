@@ -84,9 +84,11 @@ class PreProcessor(CompilerBase):
             self._error(call.args.pos,
                     f'Invalid number of arguments; expected {len(macro.params)}')
         yield Scope()
-        body = macro.substitute(call.args)
-        for y in self._pre_process(body):
-            yield y
+        for ii in range(len(call.args)):
+            name = macro.params[ii]
+            yield Define(Pos(0, 0), name, call.args[ii])
+        for x in macro.body:
+            yield x
         yield EndScope()
 
     def _pre_process(self, ast):
@@ -161,20 +163,48 @@ class Compiler(CompilerBase):
     def scope(self):
         return self.scope_stack[-1]
 
-    def resolve(self, name):
+    @singledispatchmethod
+    def eval(self, expr):
+        return value
+
+    @eval.register
+    def _eval_name(self, expr: ExprName):
+        value = None
+        name = expr.value
         for scope in reversed(self.scope_stack):
             if name in scope:
-                return scope[name]
-        return None
+                value = scope[name]
+                break
+        if value is None:
+            self._error(expr.pos, f'Identifier {name} is undefined.')
+        return self.eval(value)
 
-    def eval_expr(self, expr):
-        try:
-            return expr.eval(self)
-        except EvalException as e:
-            self._error(e.pos, str(e))
+    @eval.register
+    def _eval_value(self, expr:ExprValue):
+        return expr.value
+
+    @eval.register
+    def _eval_binary_op(self, expr:ExprBinaryOp):
+        return expr.oper(self.eval(expr.left), self.eval(expr.right))
+
+    @eval.register
+    def _eval_unary_op(self, expr:ExprUnaryOp):
+        return expr.oper(self.eval(expr.arg))
+
+    @eval.register
+    def _eval_define(self, expr:Define):
+        return self.eval(expr.expr)
+
+    @eval.register
+    def _eval_label(self, expr:Label):
+        return expr.addr
+
+    @eval.register
+    def _eval_string(self, expr:String):
+        return expr.value
 
     def resolve_expr(self, opcode, addr, expr):
-        value = self.eval_expr(expr)
+        value = self.eval(expr)
         if isinstance(value, int):
             if is8bit(value):
                 expr_bytes = [value]
@@ -223,7 +253,7 @@ class Compiler(CompilerBase):
     def resolve_fixups(self):
         def attempt(fixup):
             try:
-                self.resolve.expr(*fixup)
+                self.resolve_expr(*fixup)
                 return True
             except:
                 return False
@@ -285,7 +315,7 @@ class Compiler(CompilerBase):
     def _compile_segment(self, segment: Segment):
         self.seg = self.segments[segment.name]
         if segment.start is not None:
-            self.seg.offset = self.eval_expr(segment.start)
+            self.seg.offset = self.eval(segment.start)
 
     @_compile.register
     def _compile_op(self, op: Op):
@@ -295,6 +325,9 @@ class Compiler(CompilerBase):
                 self.seg.offset += self.resolve_expr(
                         opcode, self.seg.offset, op.arg)
             except:
+                # Assume that the arg expression cannot be resolved w/o some
+                # other label defined after this line.  Make the arg width
+                # 16 bits and log a fixup to be resolved later
                 fixup_opcode = opcode.promote16bits() or opcode
                 self.fixups.append([
                         fixup_opcode, self.seg.offset, op.arg])
@@ -304,10 +337,10 @@ class Compiler(CompilerBase):
             self.seg.offset += opcode.width
 
     def compile(self, ast):
-        self.seg = self.segments['text']
         self.start_scope()
         for item in ast:
             self._compile(item)
         for fixup in self.fixups:
             self.resolve_expr(*fixup)
         self.end_scope()
+

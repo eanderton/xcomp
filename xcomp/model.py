@@ -13,14 +13,6 @@ from .reduce_parser import Pos
 from .reduce_parser import NullPos
 from .cpu6502 import OpCode
 
-# TODO: move str rendering to decompiler
-# TOOD: move expr visit to compiler
-
-class EvalException(Exception):
-    def __init__(self, pos, msg):
-        self.pos = pos
-        super().__init__(msg)
-
 
 class FileContextException(Exception):
     pass
@@ -60,9 +52,6 @@ class String(object):
         self.pos = pos
         self.value = ''.join(chars)
 
-    def eval(self, ctx):
-        return self.value
-
 
 @attrs(auto_attribs=True)
 class Include(object):
@@ -70,16 +59,8 @@ class Include(object):
     filename: String
 
 
-class ExprContext(ABC):
-    @abstractmethod
-    def resolve(self, name):
-        pass
-
-
 class Expr(ABC):
-    @abstractmethod
-    def eval(self, ctx):
-        pass
+    pass
 
 
 @attrs(auto_attribs=True)
@@ -87,9 +68,6 @@ class Label(Expr):
     pos: Pos
     name: str
     addr: int = 0
-
-    def eval(self, ctx):
-        return self.addr
 
 
 @attrs(auto_attribs=True)
@@ -102,8 +80,6 @@ class ExprUnaryOp(Expr):
     def oper(self, a):
         pass
 
-    def eval(self, ctx):
-        return self.oper(self.arg.eval(ctx))
 
 class Expr8(ExprUnaryOp):
     opname = ''
@@ -141,56 +117,48 @@ class ExprBinaryOp(Expr):
     right: Expr
     opname = '?'
 
-    def eval(self, ctx):
-        return self.oper(self.left.eval(ctx), self.right.eval(ctx))
-
 
 class ExprAdd(ExprBinaryOp):
     opname = '+'
-
     def oper(self, a, b):
         return a + b
 
 
 class ExprSub(ExprBinaryOp):
     opname = '-'
-
     def oper(self, a, b):
         return a - b
 
 
 class ExprMul(ExprBinaryOp):
     opname = '*'
-
     def oper(self, a, b):
         return a * b
 
 
 class ExprDiv(ExprBinaryOp):
     opname = '/'
-
     def oper(self, a, b):
         return a / b
 
 
 class ExprPow(ExprBinaryOp):
     opname = '^'
-
     def oper(self, a, b):
         return a ^ b
 
 
 class ExprOr(ExprBinaryOp):
     opname = '|'
-
     def oper(self, a, b):
         return a | b
 
+
 class ExprAnd(ExprBinaryOp):
     opname = '&'
-
     def oper(self, a, b):
         return a & b
+
 
 @attrs(auto_attribs=True)
 class ExprValue(Expr):
@@ -199,22 +167,11 @@ class ExprValue(Expr):
     base: int = 10
     width: int = 8
 
-    def eval(self, ctx):
-        return self.value
-
 
 @attrs(auto_attribs=True)
 class ExprName(Expr):
     pos: Pos
     value: str
-
-    def eval(self, ctx):
-        value = ctx.resolve(self.value)
-        if value is None:
-            raise EvalException(self.pos, f'Identifier {self.value} is undefined.')
-        if isinstance(value, Expr):
-            return value.eval(ctx)
-        return value
 
 
 @attrs(auto_attribs=True)
@@ -223,14 +180,13 @@ class Define(Expr):
     name: str
     expr: Expr
 
-    def eval(self, ctx):
-        return self.expr.eval(ctx)
 
-
+@attrs(auto_attribs=True)
 class Scope(object):
     pos: Pos = NullPos
 
 
+@attrs(auto_attribs=True)
 class EndScope(object):
     pos: Pos = NullPos
 
@@ -247,14 +203,6 @@ class Macro(object):
     name: str
     params: tuple
     body: Fragment
-
-    def substitute(self, args):
-        ''' Return copy of body with params defined. '''
-        for ii in range(len(args)):
-            name = self.params[ii]
-            yield Define(Pos(0, 0), name, args[ii])
-        for x in self.body:
-            yield x
 
 
 @attrs(auto_attribs=True)
