@@ -22,7 +22,7 @@ from .decompiler import ModelPrinter
 from .model import stringbytes
 
 
-
+# TODO: convert all this into a class
 @mapped_args
 def do_help(parser, help_topics, topic):
     print(help_topics.get(topic, parser.format_help()))

@@ -5,7 +5,7 @@
 from functools import singledispatchmethod
 from .printer import StylePrinter
 from .model import *
-from .cpu6502 import AddressMode as M
+from .cpu6502 import AddressMode
 
 model_stylesheet = {
     'comment': {'color': 'green'},
@@ -21,10 +21,8 @@ model_stylesheet = {
 }
 
 
-# TODO: add .bin <filename> for direct binary include
-# TODO: add .pragma name <expr> for arbitrary metadata
-# TODO: add .dim for data of N length M init value
-
+# TODO: add support for indentation
+# TODO: add better comment support
 
 class ModelPrinter(StylePrinter):
     def __init__(self, stream=None, stylesheet=None, style_defaults=None, ansimode=True):
@@ -57,6 +55,23 @@ class ModelPrinter(StylePrinter):
           self.comment(f'; {pos.context}').nl()
           self.context = pos.context
         return self
+
+    @print.register
+    def _print_bin(self, binfile: BinaryInclude):
+        self.print(binfile.pos)
+        self.directive('.bin ').ident(binfile.name)
+        self.text(' ').string(binfile.filename).nl()
+
+    @print.register
+    def _print_dim(self, dim: Dim):
+        self.print(dim.pos)
+        self.directive('.dim ').print(dim.length).print(dim.init).nl()
+
+    @print.register
+    def _print_pragma(self, pragma: Pragma):
+        self.print(pragma.pos)
+        self.directive('.pragma ').ident(pragma.name)
+        self.text(' ').print(pragma.expr).nl()
 
     @print.register
     def _print_scope(self, scope: Scope):
@@ -146,34 +161,34 @@ class ModelPrinter(StylePrinter):
 
         # end early if there's no arg, otherwise emit a separator
         self.opcode(op.name)
-        if mode == M.implied:
+        if mode == AddressMode.implied:
             return self.nl()
         self.text(' ')
 
         # all other modes
-        if mode == M.accumulator:
+        if mode == AddressMode.accumulator:
             self.ident('a')
-        if mode == M.absolute:
+        if mode == AddressMode.absolute:
             self.print(arg)
-        if mode == M.absolute_x:
+        if mode == AddressMode.absolute_x:
             self.print(arg).text(', ').ident('x')
-        if mode == M.absolute_y:
+        if mode == AddressMode.absolute_y:
             self.print(arg).text(', ').ident('y')
-        if mode == M.immediate:
+        if mode == AddressMode.immediate:
             self.text('#').print(arg)
-        if mode == M.indirect:
+        if mode == AddressMode.indirect:
             self.text('(').print(arg).text(')')
-        if mode == M.indirect_x:
+        if mode == AddressMode.indirect_x:
             self.text('(').print(arg).text(', x)')
-        if mode == M.indirect_y:
+        if mode == AddressMode.indirect_y:
             self.text('(').print(arg).text('), y')
-        if mode == M.relative:
+        if mode == AddressMode.relative:
             self.print(arg)
-        if mode == M.zeropage:
+        if mode == AddressMode.zeropage:
             self.print(arg)
-        if mode == M.zeropage_x:
+        if mode == AddressMode.zeropage_x:
             self.print(arg).text(', x')
-        if mode == M.zeropage_y:
+        if mode == AddressMode.zeropage_y:
             self.print(arg).text(', y')
         return self.nl()
 
@@ -184,11 +199,11 @@ class ModelPrinter(StylePrinter):
 
     @print.register
     def _print_expr_unary_op(self, expr: ExprUnaryOp):
-        return self.oper(expr.opname).text(' ').print(expr.arg)
+        return self.oper(expr.opname).print(expr.arg)
 
     @print.register
     def _print_exprname(self, expr: ExprName):
-        return self.print(expr.pos).ident(expr.value)
+        return self.ident(expr.value)
 
     def print_ast(self, ast):
         for x in ast:
