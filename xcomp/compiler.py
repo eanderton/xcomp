@@ -10,6 +10,7 @@ from .model import *
 from .parser import Parser
 from .parser import ParseError
 from .compiler_base import CompilerBase
+from .preprocessor import PreProcessor
 from .cpu6502 import AddressMode
 
 
@@ -273,6 +274,19 @@ class Compiler(CompilerBase):
             self.data[self.seg.offset] = op.value
             self.seg.offset += op.width
 
+    def get_extents(self, segment_names):
+        segment_names = segment_names or ['data', 'text']
+        start = None
+        end = None
+
+        for name in segment_names:
+            if name not in compiler.segments:
+                raise Exception(f'Unknown segment name "{name}"')
+            seg = compiler.segments[name]
+            start = min(seg.start, start) if start else seg.start
+            end = max(seg.end, end) if end else seg.end
+        return (start, end)
+
     def compile(self, ast):
         self.start_scope()
         for item in ast:
@@ -281,3 +295,6 @@ class Compiler(CompilerBase):
             self.resolve_expr(*fixup)
         self.end_scope()
 
+    def compile_file(self, filename):
+        ast = PreProcessor(self.ctx_manager).parse(filename)
+        self.compile(ast)
