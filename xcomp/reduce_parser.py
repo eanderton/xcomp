@@ -2,12 +2,15 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+import logging
 from attr import attrib, attrs, Factory
 from typing import *
 from parsimonious.nodes import Node
 from parsimonious.grammar import Grammar
 import parsimonious.exceptions as exceptions
 import parsimonious.expressions as expressions
+
+log = logging.getLogger(__name__)
 
 
 @attrs(auto_attribs=True, slots=True)
@@ -71,8 +74,6 @@ class TokenList(list):
 
 
 class ReduceParser(object):
-    debug = False
-
     def __init__(self, grammar, unwrapped_exceptions=None):
         '''
         Creates a new parser around the provided arguments.
@@ -163,8 +164,8 @@ class ReduceParser(object):
         if not isinstance(node, Node):
             return node
 
-        if self.debug:
-            print(f'ReduceParser(dbg): [{node.expr_name}] type: {type(node.expr)} text: {node.text} children: {len(node.children)}')
+        log.debug('ReduceParser(dbg): %s type: %s, text: %s, children: %s',
+                node.expr_name, type(node.expr), node.text, len(node.children))
         values = TokenList()
         if isinstance(node.expr, (expressions.Regex, expressions.Literal)):
             values.append(Token.fromNode(node, context=self.context))
@@ -179,8 +180,8 @@ class ReduceParser(object):
                     else:
                         values.append(n)
         fn = getattr(self, f'visit_{node.expr_name}', None)
-        if self.debug:
-            print(f'ReduceParser(dbg): FN visit_{node.expr_name} == {fn}({values})')
+        log.debug('ReduceParser(dbg): FN visit_%s == %s(%s)', node.expr_name,
+                fn, values)
         if fn:
             return fn(Pos.fromNode(node, context=self.context), *values)
         else:

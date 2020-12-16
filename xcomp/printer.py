@@ -152,12 +152,13 @@ class StylePrinter(object):
 
 class StringPrinter(object):
     def __init__(self, stylesheet=None, style_defaults=None, ansimode=True):
-        self.printer = StylePrinter(stylesheet=stylesheet, style_defaults=style_defaults, ansimode=ansimode)
         self.buf = io.StringIO()
+        self.printer = StylePrinter(self.buf, stylesheet=stylesheet, style_defaults=style_defaults, ansimode=ansimode)
 
     def str(self):
         self.buf.seek(0)
         data = self.buf.read()
+        self.buf.flush()
         self.buf.truncate()
         return data
 
@@ -168,13 +169,13 @@ class StringPrinter(object):
 class StyleFormatter(object):
     def __init__(self, format_str=None, *args, **kwargs):
         self.printer = StringPrinter(*args, **kwargs)
-        self.format_str = format_str or '{levelname}: {msg}\n'
+        self.format_str = format_str or '{levelname}: {msg}'
 
     def format(self, record):
         kwargs = dict(record.__dict__)
         if record.args:
             kwargs.update(msg=record.msg % record.args)
-        self.printer.write(record.levelname.lower(), self.format_str, **kwargs)
+        self.printer.writeln(record.levelname.lower(), self.format_str, **kwargs)
         return self.printer.str()
 
 

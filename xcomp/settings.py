@@ -17,12 +17,13 @@ default_stylesheet = {
 
     # logging
     'error': {'color': 'red', 'bold': True},
-    'debug': {'color': 'blue', 'italic': True},
+    'debug': {'color': 'lightblue', 'italic': True},
     'info': {'color': 'green'},
-    'warn': {'color': 'yellow'},
-    'bold': {'bold': True},
+    'warning': {'color': 'yellow'},
+    'trace': {},
 
     # misc styles
+    'bold': {'bold': True},
     'underline': {'underline': True},
     'on': {'color': 'green'},
     'off': {'color': 'red'},

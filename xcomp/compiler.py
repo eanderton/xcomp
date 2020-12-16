@@ -2,6 +2,7 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+import logging
 import codecs
 import cbmcodecs
 from itertools import filterfalse
@@ -12,6 +13,8 @@ from .parser import ParseError
 from .compiler_base import CompilerBase
 from .preprocessor import PreProcessor
 from .cpu6502 import AddressMode
+
+log = logging.getLogger(__name__)
 
 
 class SegmentData(object):
@@ -51,9 +54,8 @@ class SegmentData(object):
 
 
 class Compiler(CompilerBase):
-    def __init__(self, ctx_manager, debug=False):
+    def __init__(self, ctx_manager):
         super().__init__(ctx_manager)
-        self.debug = debug
         self.reset()
 
     def reset(self):
@@ -133,8 +135,8 @@ class Compiler(CompilerBase):
     def resolve_expr(self, opcode, addr, expr):
         value, expr_bytes = self.get_expr_bytes(expr)
         vlen = len(expr_bytes)
-        if self.debug:
-            print('expr bytes', f'${addr:x}', vlen, ' '.join([f'{x:x}' for x in expr_bytes]))
+        log.debug('expr bytes %s %s %s', f'${addr:x}', vlen,
+                ' '.join([f'{x:x}' for x in expr_bytes]))
 
         # if resolving to an operation, handle bytes length and emit op byte
         width = 1
@@ -157,15 +159,16 @@ class Compiler(CompilerBase):
                     AddressMode.zeropage_y, AddressMode.immediate]:
                 if lobyte(value) == value:
                     vlen = 1
-                    print('optimizing to single-byte arg', value, vlen, expr_bytes)
+                    log.debug('optimizing to single-byte arg %s %s %s', value,
+                            vlen, expr_bytes)
 
             # make sure we don't have to many bytes
             if vlen == 2:
-                print('promoting:', opcode.value, opcode.mode)
+                log.debug('promoting: %s %s', opcode.value, opcode.mode)
                 if not opcode.promote16bits():
                     self._error(expr.pos,
                             f'operation {opcode.name} cannot take a 16 bit value')
-                print('promoted to:', opcode.value, opcode.mode)
+                log.debug('promoted to: %s %s', opcode.value, opcode.mode)
 
             # emit op byte
             self.data[addr] = opcode.value

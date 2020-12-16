@@ -26,9 +26,8 @@ class PreProcessor(CompilerBase):
        included from the root file, is returned.
     '''
 
-    def __init__(self, ctx_manager, debug=False):
+    def __init__(self, ctx_manager):
         super().__init__(ctx_manager)
-        self.debug = debug
         self.reset()
 
     def reset(self):
@@ -36,7 +35,6 @@ class PreProcessor(CompilerBase):
 
     def _parse(self, ctx_name):
         parser = Parser()
-        parser.debug = self.debug
         # TODO: handle duplicate include
         text = self.ctx_manager.get_text(ctx_name)
         return parser.parse(text, context=ctx_name)

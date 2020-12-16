@@ -159,25 +159,34 @@ class Application(object):
         Argument parsing, I/O configuration, and subcommmand dispatch are conducted here.
         """
 
-        # set logging default
-        logging.basicConfig(level=logging.DEBUG)
-        logging.getLogger().handlers[0].setFormatter(StyleFormatter(stylesheet=default_stylesheet, ansimode=not is_piped()))
+        # configure root logger
+        logger = logging.getLogger()
+        formatter = StyleFormatter(stylesheet=default_stylesheet,
+                ansimode=not is_piped())
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARN)
 
         # parse args and set arguments directly to object attributes
         args = self.parser.parse_args(argv)
         self.__dict__.update(vars(args))
-        self.printer = StylePrinter(stylesheet=default_stylesheet, ansimode=not is_piped())
+        self.printer = StylePrinter(stylesheet=default_stylesheet,
+                ansimode=not is_piped())
 
-        log.warn('foobar %s', 123)
-        #with log.warn() as p:
-        #    p.text('laksjdflskjf').nl()
+        if args.debug or args.trace:
+            # filter some module logs in debug mode
+            logger.setLevel(logging.DEBUG)
+            logging.getLogger('xcomp.reduce_parser').setLevel(logging.WARN)
 
-
-        # debug output
-        if args.debug:
+            # debug args
             for k,v in vars(args).items():
                 if k not in ['parser', 'printer', 'fn', 'help_topics']:
                     self.printer.key(k).value(str(v)).nl()
+
+        # trace output - enable all module logging
+        if args.trace:
+            logging.getLogger('xcomp.reduce_parser').setLevel(logging.DEBUG)
 
         # call handler
         try:
