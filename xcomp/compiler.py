@@ -142,21 +142,35 @@ class Compiler(CompilerBase):
             if vlen > 2:
                 self._error(expr.pos,
                         f'Expresssion evalutes to {vlen} bytes; operations can only take up to 2.')
+
             # special case: reduce argument to a 8 bit relative offset
             if opcode.mode == AddressMode.relative:
-                jmp = (value - (addr + 2))
+                jmp = (value - addr - 2)
                 if jmp > 127 or jmp < -128:
                     self._error(expr.pos,
                             f'Relative jump for {opcode.name} is out of range.')
                 expr_bytes = [jmp & 0xFF]
                 vlen = 1
-            elif vlen == 2:
+
+            # special case: use single-byte address if that's all we have
+            if opcode.mode in [AddressMode.zeropage, AddressMode.zeropage_x,
+                    AddressMode.zeropage_y, AddressMode.immediate]:
+                if lobyte(value) == value:
+                    vlen = 1
+                    print('optimizing to single-byte arg', value, vlen, expr_bytes)
+
+            # make sure we don't have to many bytes
+            if vlen == 2:
+                print('promoting:', opcode.value, opcode.mode)
                 if not opcode.promote16bits():
-                    self._error(expr.pos, f'operation cannot take a 16 bit value')
+                    self._error(expr.pos,
+                            f'operation {opcode.name} cannot take a 16 bit value')
+                print('promoted to:', opcode.value, opcode.mode)
+
             # emit op byte
             self.data[addr] = opcode.value
             addr += 1
-            width = opcode.width
+            #width = opcode.width
 
         # emit args and return effective length
         for ii in range(vlen):
@@ -280,9 +294,9 @@ class Compiler(CompilerBase):
         end = None
 
         for name in segment_names:
-            if name not in compiler.segments:
+            if name not in self.segments:
                 raise Exception(f'Unknown segment name "{name}"')
-            seg = compiler.segments[name]
+            seg = self.segments[name]
             start = min(seg.start, start) if start else seg.start
             end = max(seg.end, end) if end else seg.end
         return (start, end)

@@ -11,7 +11,9 @@ import sys
 import argparse
 import io
 import difflib
+import logging
 from .printer import StylePrinter
+from .printer import StyleFormatter
 from .utils import *
 from .settings import *
 from .preprocessor import PreProcessor
@@ -19,6 +21,7 @@ from .compiler_base import FileContextManager
 from .compiler import Compiler
 from .decompiler import ModelPrinter
 
+log = logging.getLogger(__name__)
 
 class Application(object):
     def __init__(self):
@@ -81,18 +84,19 @@ class Application(object):
         self.parser = parser
 
     def do_help(self):
-        print(self.help_topics.get(self.topic, self.parser.format_help()))
+        self.printer.text(self.help_topics.get(self.topic, self.parser.format_help()))
 
     def do_dump(self):
         ctx_manager = FileContextManager(self.include)
         compiler = Compiler(ctx_manager)
         compiler.compile_file(self.source_file)
-        start, end = compiler.extents()
+        start, end = compiler.get_extents(self.segment)
 
+        printer = self.printer
         printer.title('Segment Data').nl()
         for name, seg in compiler.segments.items():
             seg = compiler.segments[name]
-            printer.bold(f'  {name}: ')
+            printer.bold(f'  {name:5}: ')
             printer.text(f'${seg.start:04X}-${seg.end:04X}')
             printer.nl()
         printer.nl()
@@ -102,24 +106,24 @@ class Application(object):
         printer.text(f' - Size: ${end-start:04X} ({end-start}) bytes').nl()
         print_hex(printer, compiler.data, start, end)
 
-    def do_compile():
+    def do_compile(self):
         ctx_manager = FileContextManager(self.include)
         compiler = Compiler(ctx_manager)
         compiler.compile_file(self.source_file)
-        start, end = self.extents()
+        start, end = compiler.get_extents(self.segment)
         header = None
 
-        if out_format == 'raw':
+        if self.out_format == 'raw':
             header = bytes([])
-        elif out_format.lower() == 'prg':
+        elif self.out_format.lower() == 'prg':
             start_addr = compiler.pragma.get('c64_prg_start', 0x0801)
             header = intbytes(start_addr)
 
-        with open(out, 'wb+') as f:
+        with open(self.output, 'wb+') as f:
             f.write(header)
             f.write(compiler.data[start:end])
 
-    def do_preprocess(ast):
+    def do_preprocess(self, ast):
         ctx_manager = FileContextManager(self.include)
         ast = PreProcessor(ctx_manager).parse(self.source_file)
         ModelPrinter(ansimode=not is_piped()).print_ast(ast)
@@ -155,16 +159,25 @@ class Application(object):
         Argument parsing, I/O configuration, and subcommmand dispatch are conducted here.
         """
 
+        # set logging default
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger().handlers[0].setFormatter(StyleFormatter(stylesheet=default_stylesheet, ansimode=not is_piped()))
+
         # parse args and set arguments directly to object attributes
         args = self.parser.parse_args(argv)
         self.__dict__.update(vars(args))
         self.printer = StylePrinter(stylesheet=default_stylesheet, ansimode=not is_piped())
 
+        log.warn('foobar %s', 123)
+        #with log.warn() as p:
+        #    p.text('laksjdflskjf').nl()
+
+
         # debug output
         if args.debug:
             for k,v in vars(args).items():
                 if k not in ['parser', 'printer', 'fn', 'help_topics']:
-                    args.printer.key(k).value(str(v)).nl()
+                    self.printer.key(k).value(str(v)).nl()
 
         # call handler
         try:
@@ -172,7 +185,7 @@ class Application(object):
         except Exception as e:
             if args.debug:
                 raise
-            args.printer.error(f'Error: {str(e)}').nl()
+            self.printer.error(f'Error: {str(e)}').nl()
             return False
         return True
 

@@ -72,7 +72,7 @@ class PreprocessorTest(TestBase):
                 .text $8000
             start:
                 lda #$80
-                lda < foo
+                lda <foo
             ; <internal>
             .scope
                 .def value 123
@@ -130,11 +130,11 @@ class CompilerTest(TestBase):
         self.assertDataEqual(0x0800, 0x0803, [
             0xEA, 0x69, 0x80
         ])
-        self.assertSegAttrEqual('text', 'offset', 0x0804)
+        self.assertSegAttrEqual('text', 'offset', 0x0803)
 
     def test_op_arg_fail(self):
         with self.assertRaisesRegex(CompilationError,
-                r'root.asm \(1, 6\): operation cannot take a 16 bit value'):
+                r'root.asm \(1, 6\): operation adc cannot take a 16 bit value'):
             self.set_file('root.asm', """
             adc #$1234
             """)
@@ -174,6 +174,28 @@ class CompilerTest(TestBase):
         self.compile('root.asm')
         self.assertDataEqual(0x0200, 0x0204, [
             0x34, 0x12, 0x78, 0x56,
+        ])
+
+    def test_simple_code(self):
+        self.set_file('root.asm', """
+        .text $0800
+        nop
+        lda #$1F
+        nop
+        sta $0011
+        nop
+        lda #$22
+        sta $d020
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0800, 0x080C, [
+            0xEA,
+            0xA9, 0x1F,
+            0xEA,
+            0x85, 0x11,
+            0xEA,
+            0xA9, 0x22,
+            0x8D, 0x20, 0xD0
         ])
 
 
@@ -366,3 +388,18 @@ class SegmentTest(TestBase):
         data = self.compiler.segments['data']
         self.assertEqual(data.start, 0x0300)
         self.assertEqual(data.end, 0x0305)
+
+
+class JumpTest(TestBase):
+    def test_relative_jump(self):
+        self.set_file('root.asm', """
+        .text $0100
+        foo:
+            beq foo
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0100, 0x0102, [
+            0xF0, 0xFE,
+        ])
+        text = self.compiler.segments['text']
+        pass

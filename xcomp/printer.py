@@ -4,6 +4,7 @@
 
 """Ansi-enhanced output printer library."""
 
+import io
 import sys
 from colors import color
 from colors import STYLES
@@ -147,3 +148,33 @@ class StylePrinter(object):
     def __getattr__(self, style_name):
         """Returns write wrapper for the style indicated by the attribute name."""
         return StylePrinterFn(self, style_name)
+
+
+class StringPrinter(object):
+    def __init__(self, stylesheet=None, style_defaults=None, ansimode=True):
+        self.printer = StylePrinter(stylesheet=stylesheet, style_defaults=style_defaults, ansimode=ansimode)
+        self.buf = io.StringIO()
+
+    def str(self):
+        self.buf.seek(0)
+        data = self.buf.read()
+        self.buf.truncate()
+        return data
+
+    def __getattr__(self, name):
+        return getattr(self.printer, name)
+
+
+class StyleFormatter(object):
+    def __init__(self, format_str=None, *args, **kwargs):
+        self.printer = StringPrinter(*args, **kwargs)
+        self.format_str = format_str or '{levelname}: {msg}\n'
+
+    def format(self, record):
+        kwargs = dict(record.__dict__)
+        if record.args:
+            kwargs.update(msg=record.msg % record.args)
+        self.printer.write(record.levelname.lower(), self.format_str, **kwargs)
+        return self.printer.str()
+
+
