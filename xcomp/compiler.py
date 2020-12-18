@@ -52,25 +52,20 @@ class SegmentData(object):
         else:
             self._end = max(self._end, value)
 
-
-class Compiler(CompilerBase):
-    def __init__(self, ctx_manager):
+class Evaluator(CompilerBase):
+    def __init__(self, data, ctx_manager):
         super().__init__(ctx_manager)
-        self.reset()
-
-    def reset(self):
+        self.data = data
         self.encoding = 'utf-8'
-        self.data = bytearray(0xFFFF)
-        self.segments = {
-            'zero': SegmentData(0x0000),
-            'bss':  SegmentData(0x0100),
-            'data': SegmentData(0x0200),
-            'text': SegmentData(0x0800),
-        }
         self.fixups = []
         self.scope_stack = []
-        self.seg = self.segments['text']
-        self.pragma = {}
+
+    def start_scope(self):
+        self.scope_stack.append({})
+
+    def end_scope(self):
+        self.resolve_fixups()
+        self.scope_stack.pop()
 
     @property
     def scope(self):
@@ -180,21 +175,31 @@ class Compiler(CompilerBase):
             self.data[addr + ii] = expr_bytes[ii]
         return width + vlen
 
-    def resolve_fixups(self):
+    def resolve_fixups(self, must_pass=False):
         def attempt(fixup):
             try:
                 self.resolve_expr(*fixup)
+                if must_pass:
+                    raise
                 return True
             except:
                 return False
         self.fixups[:] = filterfalse(attempt, self.fixups)
 
-    def start_scope(self):
-        self.scope_stack.append({})
 
-    def end_scope(self):
-        self.resolve_fixups()
-        self.scope_stack.pop()
+class Compiler(CompilerBase):
+    def __init__(self, ctx_manager):
+        super().__init__(ctx_manager)
+        self.data = bytearray(0xFFFF)
+        self.eval = Evaluator(self.data, ctx_manager)
+        self.segments = {
+            'zero': SegmentData(0x0000),
+            'bss':  SegmentData(0x0100),
+            'data': SegmentData(0x0200),
+            'text': SegmentData(0x0800),
+        }
+        self.seg = self.segments['text']
+        self.pragma = {}
 
     @singledispatchmethod
     def _compile(self, item):
@@ -214,37 +219,37 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_pragma(self, pragma: Pragma):
-        self.pragma[pragma.name] = self.eval(pragma.expr)
+        self.pragma[pragma.name] = self.eval.eval(pragma.expr)
 
     @_compile.register
     def _compile_encoding(self, encoding: Encoding):
         try:
             codecs.getreader(encoding.name)
-            self.encoding = encoding.name
+            self.eval.encoding = encoding.name
         except LookupError:
             self._error(encoding.pos, f'Invalid string codec "{encoding.name}"')
 
     @_compile.register
     def _compile_scope(self, scope: Scope):
-        self.start_scope()
+        self.eval.start_scope()
 
     @_compile.register
     def _compile_end_scope(self, endscope: EndScope):
-        self.end_scope()
+        self.eval.end_scope()
 
     @_compile.register
     def _compile_define(self, define: Define):
-        if define.name in self.scope:
+        if define.name in self.eval.scope:
             self._error(define.pos,
                     f'Identifier "{define.name}" is already defined in scope')
-        self.scope[define.name] = define
+        self.eval.scope[define.name] = define
 
     @_compile.register
     def _compile_label(self, label: Label):
-        if label.name in self.scope:
+        if label.name in self.eval.scope:
             self._error(label.pos,
                     f'Identifier "{label.name}" is already defined in scope')
-        self.scope[label.name] = label
+        self.eval.scope[label.name] = label
         label.addr = self.seg.offset
 
     @_compile.register
@@ -252,18 +257,18 @@ class Compiler(CompilerBase):
         for ii in range(len(storage.items)):
             fixup = (None, self.seg.offset, storage.items[ii])
             try:
-                self.resolve_expr(*fixup)
+                self.eval.resolve_expr(*fixup)
             except Exception as e:
-                self.fixups.append(fixup)
+                self.eval.fixups.append(fixup)
             self.seg.offset += storage.width
 
     # TODO: patch to work with forward references
     @_compile.register
     def _compile_dim(self, dim: Dim):
-        length = self.eval(dim.length)
+        length = self.eval.eval(dim.length)
         init_bytes = []
         for item in dim.init:
-            _, expr_bytes = self.get_expr_bytes(item)
+            _, expr_bytes = self.eval.get_expr_bytes(item)
             init_bytes.extend(expr_bytes)
         init_len = len(init_bytes)
         end = self.seg.offset + length
@@ -276,20 +281,20 @@ class Compiler(CompilerBase):
     def _compile_segment(self, segment: Segment):
         self.seg = self.segments[segment.name]
         if segment.start is not None:
-            self.seg.offset = self.eval(segment.start)
+            self.seg.offset = self.eval.eval(segment.start)
 
     @_compile.register
     def _compile_op(self, op: Op):
         if op.arg:
             try:
-                self.seg.offset += self.resolve_expr(
+                self.seg.offset += self.eval.resolve_expr(
                         op, self.seg.offset, op.arg)
             except:
                 # Assume that the arg expression cannot be resolved w/o some
                 # other label defined after this line.  Make the arg width
                 # 16 bits and log a fixup to be resolved later
                 op.promote16bits()
-                self.fixups.append([op, self.seg.offset, op.arg])
+                self.eval.fixups.append([op, self.seg.offset, op.arg])
                 self.seg.offset += op.width
         else:
             self.data[self.seg.offset] = op.value
@@ -309,12 +314,12 @@ class Compiler(CompilerBase):
         return (start, end)
 
     def compile(self, ast):
-        self.start_scope()
+        self.eval.start_scope()
         for item in ast:
             self._compile(item)
-        for fixup in self.fixups:
-            self.resolve_expr(*fixup)
-        self.end_scope()
+        for fixup in self.eval.fixups:
+            self.eval.resolve_expr(*fixup)
+        self.eval.end_scope()
 
     def compile_file(self, filename):
         ast = PreProcessor(self.ctx_manager).parse(filename)

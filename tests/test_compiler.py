@@ -68,18 +68,18 @@ class PreprocessorTest(TestBase):
                 foobar 123
             """)
         self.assertAstEqual(self.parse('foo.asm'), """
-            ; foo.asm
+            ; <foo.asm>
                 .text $8000
             start:
                 lda #$80
                 lda <foo
-            ; <internal>
+            ; <<internal>>
             .scope
                 .def value 123
-            ; foo.asm
+            ; <foo.asm>
                 nop
                 adc #value
-            ; <internal>
+            ; <<internal>>
             .endscope
             """)
 
@@ -94,12 +94,12 @@ class PreprocessorTest(TestBase):
         adc #$80
         """)
         self.assertAstEqual(self.parse('root.asm'), """
-        ; root.asm
+        ; <root.asm>
             .text
-        ; test.asm
+        ; <test.asm>
             lda $40
             adc #$80
-        ; root.asm
+        ; <root.asm>
             nop
         """)
 
@@ -205,7 +205,7 @@ class EncodingTest(TestBase):
         .encoding "utf-16"
         """)
         self.compile('root.asm')
-        self.assertEqual(self.compiler.encoding, 'utf-16')
+        self.assertEqual(self.compiler.eval.encoding, 'utf-16')
 
     def test_set_encoding_fail(self):
         with self.assertRaisesRegex(CompilationError,

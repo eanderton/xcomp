@@ -22,8 +22,8 @@ grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  encoding / scope / endscope / dim / bin /pragma /
-                  label / oper / macro_call / eol / _
+                  encoding / scope / endscope / dim / bin / var /
+                  pragma / label / oper / macro_call / eol / _
 
 comment         = semi_tok ~r".*(?=\n|$)"
 eol             = _ eol_tok
@@ -46,6 +46,9 @@ endscope        = endscope_tok _
 
 dim             = dim_tok sp expr _ (comma_tok _ expr)*
 bin             = bin_tok sp string
+
+var             = var_tok sp name sp expr _ (comma_tok _ expr)*
+
 pragma          = pragma_tok _ name _ expr
 
 macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
@@ -100,6 +103,7 @@ scope_tok       = ".scope"
 endscope_tok    = ".endscope"
 bin_tok         = ".bin"
 dim_tok         = ".dim"
+var_tok         = ".var"
 pragma_tok      = ".pragma"
 def_tok         = ".def"
 macro_tok       = ".macro"
@@ -298,6 +302,9 @@ class Parser(ReduceParser):
 
     def visit_dim(self, pos, length, *exprs):
         return Dim(pos, length, exprs)
+
+    def visit_var(self, pos, name, typeval=None, count=None, *init):
+        return Var(pos, name.value, typeval, count, init)
 
     ### EXPRESSIONS ###
 

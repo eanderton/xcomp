@@ -257,18 +257,18 @@ class CommentTest(ParserTest):
     def test_full_line_comment(self):
         result = self.parse("""; foo bar baz""")
         self.assertEqual(result, [
-            Comment(pos=Pos(start=0, end=13, context='<internal>'),
+            Comment(pos=Pos(start=0, end=13),
                 full_line=True, text=' foo bar baz'),
         ])
 
     def test_full_line_multi(self):
         result = self.parse(""";foo\n;bar\n;baz""")
         self.assertEqual(result, [
-            Comment(pos=Pos(start=0, end=4, context='<internal>'),
+            Comment(pos=Pos(start=0, end=4),
                 full_line=True, text='foo'),
-            Comment(pos=Pos(start=5, end=9, context='<internal>'),
+            Comment(pos=Pos(start=5, end=9),
                 full_line=True, text='bar'),
-            Comment(pos=Pos(start=10, end=14, context='<internal>'),
+            Comment(pos=Pos(start=10, end=14),
                 full_line=True, text='baz'),
         ])
 
@@ -281,4 +281,30 @@ class CommentTest(ParserTest):
         self.assertEqual(pragma.comment.text, 'baz')
         self.assertEqual(pragma.comment.full_line, False)
 
+
+class VarTest(ParserTest):
+    def test_var_simple(self):
+        result = self.parse(""".var foo 1""")
+        self.assertEqual(result, [
+            Var(pos=Pos(start=0, end=10), name='foo', count=None, init=tuple(),
+                typeval=ExprValue(Pos(start=9, end=10), value=1)),
+        ])
+
+    def test_var_count(self):
+        result = self.parse(""".var foo 1, 10""")
+        self.assertEqual(len(result), 1)
+        var = result[0]
+        self.assertEqual(var.name, 'foo')
+        self.assertEqual(var.typeval.value, 1)
+        self.assertEqual(var.count.value, 10)
+
+    def test_var_init(self):
+        result = self.parse(""".var foo 2,30, 1, 2, 3""")
+        self.assertEqual(len(result), 1)
+        var = result[0]
+        self.assertEqual(var.name, 'foo')
+        self.assertEqual(var.typeval.value, 2)
+        self.assertEqual(var.count.value, 30)
+        self.assertEqual(len(var.init), 3)
+        self.assertEqual(tuple([x.value for x in var.init]), (1, 2, 3))
 

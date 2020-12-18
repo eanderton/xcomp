@@ -16,8 +16,6 @@ from .reduce_parser import Pos
 from .reduce_parser import NullPos
 
 
-
-
 @attrs(auto_attribs=True)
 class Comment(object):
     pos: Pos
@@ -237,4 +235,12 @@ class Segment(ModelBase):
 @attrs(auto_attribs=True)
 class Dim(ModelBase):
     length: Expr
+    init: List[Expr] = Factory(list)
+
+
+@attrs(auto_attribs=True)
+class Var(ModelBase):
+    name: str
+    typeval: Expr
+    count: Expr = None
     init: List[Expr] = Factory(list)
