@@ -5,6 +5,7 @@
 from functools import singledispatchmethod
 from .printer import StylePrinter
 from .model import *
+from .utils import is8bit
 from .cpu6502 import AddressMode
 
 model_stylesheet = {
@@ -73,6 +74,10 @@ class ModelPrinter(StylePrinter):
           self.comment('; <').comment(pos.context).comment('>').nl()
           self.context = pos.context
         return self
+
+    @print.register
+    def _print_str(self, string: String):
+        return self.string(string.value).eol(string)
 
     @print.register
     def _print_bin(self, binfile: BinaryInclude):
@@ -154,12 +159,12 @@ class ModelPrinter(StylePrinter):
     def _print_expr_value(self, expr: ExprValue):
         with self.number as p:
             if expr.base == 2:
-                if expr.width == 16:
+                if expr.width == 16 or not is8bit(expr.value):
                     p.bold('%').text(f'{expr.value:016b}')
                 else:
                     p.bold('%').text(f'{expr.value:08b}')
             elif expr.base == 16:
-                if expr.width == 16:
+                if expr.width == 16 or not is8bit(expr.value):
                     p.bold('$').text(f'{expr.value:04x}')
                 else:
                     p.bold('$').text(f'{expr.value:02x}')

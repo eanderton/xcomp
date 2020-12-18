@@ -39,7 +39,8 @@ class Application(object):
                 help='turns off ANSI colors')
         flags.add_argument('-d', '--debug', action='store_true',
                 help='enable debug output')
-        flags.add_argument('--trace', action='store_true',
+        flags.add_argument('--trace', nargs='*', action='extend',
+                choices=['compiler', 'eval', 'pre', 'parser', 'reducer'],
                 help='enable trace output')
 
         compiler_flags = argparse.ArgumentParser(add_help=False)
@@ -63,9 +64,9 @@ class Application(object):
                 help='Dump compilation results to console')
         dump.set_defaults(fn=self.do_dump, **cli_defaults)
 
-        preproc = subparsers.add_parser('preproc', parents=[flags, compiler_flags],
+        pre = subparsers.add_parser('pre', parents=[flags, compiler_flags],
                 help='Generate preprocessor output')
-        preproc.set_defaults(fn=self.do_preprocess, **cli_defaults)
+        pre.set_defaults(fn=self.do_preprocess, **cli_defaults)
 
         fmt = subparsers.add_parser('fmt', parents=[flags],
                 help='Re-formats a source file and displays a diff')
@@ -78,7 +79,8 @@ class Application(object):
         parser.set_defaults(fn=self.do_help, topic=None, help_topics={
             'compile': compiler.format_help(),
             'dump': dump.format_help(),
-            'preproc': preproc.format_help(),
+            'pre': pre.format_help(),
+            'fmt': fmt.format_help(),
             'help': helper.format_help(),
         })
         self.parser = parser
@@ -174,19 +176,24 @@ class Application(object):
         self.printer = StylePrinter(stylesheet=default_stylesheet,
                 ansimode=not is_piped())
 
-        if args.debug or args.trace:
-            # filter some module logs in debug mode
+        # turn on debug logging in debug or trace mode
+        # reveal argparse results
+        if self.debug or self.trace:
             logger.setLevel(logging.DEBUG)
-            logging.getLogger('xcomp.reduce_parser').setLevel(logging.WARN)
-
-            # debug args
             for k,v in vars(args).items():
                 if k not in ['parser', 'printer', 'fn', 'help_topics']:
                     self.printer.key(k).value(str(v)).nl()
 
-        # trace output - enable all module logging
-        if args.trace:
-            logging.getLogger('xcomp.reduce_parser').setLevel(logging.DEBUG)
+        # trace output - enable debug on specific modules
+        for name, mod in {
+                'compiler': 'xcomp.compiler',
+                'eval': 'xcomp.eval',
+                'pre': 'xcomp.preprocessor',
+                'parser': 'xcomp.parser',
+                'reducer': 'xcomp.reduce_parser',
+                }.items():
+            level = logging.DEBUG if name in self.trace else logging.WARN
+            logging.getLogger(mod).setLevel(level)
 
         # call handler
         try:
@@ -195,6 +202,8 @@ class Application(object):
             if args.debug:
                 raise
             self.printer.error(f'Error: {str(e)}').nl()
+            if self.debug:
+                log.exception(e)
             return False
         return True
 

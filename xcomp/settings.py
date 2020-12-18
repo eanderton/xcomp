@@ -44,7 +44,7 @@ module_path = os.path.dirname(os.path.abspath(__file__))
 cli_defaults = {
     'no_color': to_bool(os.environ.get('XCOMP_NO_COLOR', 'false')),
     'debug': to_bool(os.environ.get('XCOMP_DEBUG', 'false')),
-    'trace': to_bool(os.environ.get('XCOMP_TRACE', 'false')),
+    'trace': shlex.split(os.environ.get('XCOMP_TRACE', '')),
     'include': shlex.split(os.environ.get('XCOMP_INCLUDE', f'./ {module_path}')),
     'segment': shlex.split(os.environ.get('XCOMP_SEGMENT_OUT', '')),
     'out': os.environ.get('XCOMP_OUT', './out.bin'),
