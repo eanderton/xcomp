@@ -201,6 +201,10 @@ class Compiler(CompilerBase):
         raise Exception(f'no defined compile handler for item: {type(item)}')
 
     @_compile.register
+    def _compile_comment(self, comment: Comment):
+        pass  # throw it away
+
+    @_compile.register
     def _compile_bin(self, binfile: BinaryInclude):
         value = self.ctx_manager.get_text(binfile.filename, 'rb')
         start = self.seg.offset

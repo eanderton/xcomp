@@ -2,13 +2,16 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
-from abc import *
+from abc import abstractmethod
 from attr import attrs
 from attr import attrib
 from attr import Factory
 from typing import *
 from .cpu6502 import *
-from .utils import *
+from .utils import is8bit
+from .utils import lobyte
+from .utils import hibyte
+from .utils import stringbytes
 from .reduce_parser import Pos
 from .reduce_parser import NullPos
 

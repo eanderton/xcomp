@@ -13,9 +13,11 @@ from .reduce_parser import TokenList
 
 log = logging.getLogger(__name__)
 
+# TODO: .struct ?
+# TODO: .def call arguments
+# TODO: implicit functions for expr
+# TODO: .var name width/stuct (, count)? (, init_expr)*
 
-# TODO: add support for associating end-line comments with a statement
-# TODO: somehow detect and store "whole-line" comments
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*
 
@@ -28,7 +30,7 @@ eol             = _ eol_tok
 
 include         = include_tok sp string
 
-def             = def_tok _ name sp expr
+def             = def_tok sp name sp expr
 
 byte_storage    = byte_tok sp storage
 word_storage    = word_tok sp storage
@@ -43,7 +45,7 @@ scope           = scope_tok _
 endscope        = endscope_tok _
 
 dim             = dim_tok sp expr _ (comma_tok _ expr)*
-bin             = bin_tok _ string
+bin             = bin_tok sp string
 pragma          = pragma_tok _ name _ expr
 
 macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok

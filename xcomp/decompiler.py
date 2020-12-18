@@ -22,17 +22,30 @@ model_stylesheet = {
 
 
 # TODO: add support for indentation
-# TODO: add better comment support
 
 class ModelPrinter(StylePrinter):
-    def __init__(self, stream=None, stylesheet=None, style_defaults=None, ansimode=True):
-        stylesheet = stylesheet if stylesheet is not None else model_stylesheet
-        super().__init__(stream, stylesheet, style_defaults, ansimode)
+    def __init__(self, *args, **kwargs):
         self.context = None
+        kwargs.setdefault('stylesheet', model_stylesheet)
+        super().__init__(*args, **kwargs)
+
+    def end(self, item):
+        """Writes end of statement comment if present"""
+        comment = getattr(item, 'comment', None)
+        if comment:
+            self.comment(' ;').comment(comment.text).nl()
+        return self
+
+    def eol(self, item):
+        """Ends a statement with an optional comment and a newline"""
+        self.end(item)
+        if not self._start_newline:
+            self.nl()
+        return self
 
     @singledispatchmethod
     def print(self, item):
-        return self.text(str(item)).nl()
+        return self.text(str(item)).eol(item)
 
     @print.register
     def _print_list(self, items: list):
@@ -50,9 +63,14 @@ class ModelPrinter(StylePrinter):
         return self
 
     @print.register
+    def _print_comment(self, comment: Comment):
+        return self.comment(';').comment(comment.text).nl()
+
+    @print.register
     def _print_pos(self, pos: Pos):
+        # TODO; add boolean to turn this on/off
         if pos.context != self.context:
-          self.comment(f'; {pos.context}').nl()
+          self.comment('; <').comment(pos.context).comment('>').nl()
           self.context = pos.context
         return self
 
@@ -61,56 +79,58 @@ class ModelPrinter(StylePrinter):
         self.print(binfile.pos)
         self.directive('.bin ').ident(binfile.name)
         self.text(' ').string(binfile.filename).nl()
+        return self.end(binfile)
 
     @print.register
     def _print_dim(self, dim: Dim):
         self.print(dim.pos)
-        self.directive('.dim ').print(dim.length).print(dim.init).nl()
+        self.directive('.dim ').print(dim.length).print(dim.init)
+        return self.eol(dim)
 
     @print.register
     def _print_pragma(self, pragma: Pragma):
         self.print(pragma.pos)
         self.directive('.pragma ').ident(pragma.name)
-        self.text(' ').print(pragma.expr).nl()
+        self.text(' ').print(pragma.expr)
+        return self.eol(pragma)
 
     @print.register
     def _print_scope(self, scope: Scope):
         self.print(scope.pos)
-        self.scope('.scope').nl()
-        return self
+        self.scope('.scope')
+        return self.eol(scope)
 
     @print.register
     def _print_endscope(self, endscope: EndScope):
         self.print(endscope.pos)
-        self.scope('.endscope').nl()
-        return self
+        self.scope('.endscope')
+        return self.eol(endscope)
 
     @print.register
     def _print_encoding(self, encoding: Encoding):
         self.print(encoding.pos)
-        self.directive('.encoding ').string(encoding.name).nl()
-        return self
+        self.directive('.encoding ').string(encoding.name)
+        return self.eol(encoding)
 
     @print.register
     def _print_define(self, define: Define):
         self.print(define.pos)
         self.directive('.def ').ident(f'{define.name} ')
         self.print(define.expr)
-        self.nl()
-        return self
+        return self.eol(define)
 
     @print.register
     def _print_label(self, label: Label):
         self.print(label.pos)
-        self.label(f'{label.name}:').nl()
-        return self
+        self.label(f'{label.name}:')
+        return self.eol(label)
 
     @print.register
     def _print_macro_call(self, macro: MacroCall):
         self.print(macro.pos)
         self.call(macro.name)
         self.print(macro.args)
-        return self
+        return self.eol(macro)
 
     @print.register
     def _print_storage(self, storage: Storage):
@@ -120,8 +140,7 @@ class ModelPrinter(StylePrinter):
         else:
             self.directive('.word ')
         self.print(storage.items)
-        self.nl()
-        return self
+        return self.eol(storage)
 
     @print.register
     def _print_segment(self, segment: Segment):
@@ -129,8 +148,7 @@ class ModelPrinter(StylePrinter):
         self.directive(f'.{segment.name}')
         if segment.start is not None:
             self.text(' ').print(segment.start)
-        self.nl()
-        return self
+        return self.eol(segment)
 
     @print.register
     def _print_expr_value(self, expr: ExprValue):
@@ -151,7 +169,7 @@ class ModelPrinter(StylePrinter):
                     p.bold('!').text(str(value))
                 else:
                     p.text(str(value))
-        return self
+        return self.end(expr)
 
     @print.register
     def _print_op(self, op: Op):
@@ -190,20 +208,20 @@ class ModelPrinter(StylePrinter):
             self.print(arg).text(', x')
         if mode == AddressMode.zeropage_y:
             self.print(arg).text(', y')
-        return self.nl()
+        return self.eol(op)
 
     @print.register
     def _print_expr_binary_op(self, expr: ExprBinaryOp):
         return self.print(expr.left).text(' ').oper(expr.opname) \
-                .text(' ').print(expr.right)
+                .text(' ').print(expr.right).end(expr)
 
     @print.register
     def _print_expr_unary_op(self, expr: ExprUnaryOp):
-        return self.oper(expr.opname).print(expr.arg)
+        return self.oper(expr.opname).print(expr.arg).end(expr)
 
     @print.register
     def _print_exprname(self, expr: ExprName):
-        return self.ident(expr.value)
+        return self.ident(expr.value).end(expr)
 
     def print_ast(self, ast):
         for x in ast:

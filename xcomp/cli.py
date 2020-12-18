@@ -123,7 +123,7 @@ class Application(object):
             f.write(header)
             f.write(compiler.data[start:end])
 
-    def do_preprocess(self, ast):
+    def do_preprocess(self):
         ctx_manager = FileContextManager(self.include)
         ast = PreProcessor(ctx_manager).parse(self.source_file)
         ModelPrinter(ansimode=not is_piped()).print_ast(ast)
@@ -144,7 +144,7 @@ class Application(object):
         if diff:
             for line in diff:
                 style = diff_style[line[0]]
-                printer.write(style, line).nl()
+                self.printer.write(style, line).nl()
         if not test:
             # rewrite the original file
             real_filename = ctx_manager.search_file(self.source_file)
