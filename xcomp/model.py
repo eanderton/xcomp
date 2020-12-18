@@ -4,6 +4,7 @@
 
 from abc import *
 from attr import attrs
+from attr import attrib
 from attr import Factory
 from typing import *
 from .cpu6502 import *
@@ -12,50 +13,60 @@ from .reduce_parser import Pos
 from .reduce_parser import NullPos
 
 
-class Expr(ABC):
+
+
+@attrs(auto_attribs=True)
+class Comment(object):
+    pos: Pos
+    full_line: bool
+    text: str
+
+
+@attrs(auto_attribs=True)
+class ModelBase(object):
+    pos: Pos
+    comment: Comment = attrib(init=False, default=None)
+
+
+@attrs(auto_attribs=True)
+class Expr(ModelBase):
     pass
 
 
 @attrs(auto_attribs=True)
-class Pragma(object):
-    pos: Pos
+class Pragma(ModelBase):
     name: str
     expr: Expr
 
 
 @attrs(auto_attribs=True)
-class Encoding(object):
-    pos: Pos
+class Encoding(ModelBase):
     name: str
 
 
-class String(object):
-    def __init__(self, pos, *chars):
-        self.pos = pos
-        self.value = ''.join(chars)
+@attrs(auto_attribs=True)
+class String(ModelBase):
+    value: str
 
 
 @attrs(auto_attribs=True)
-class Include(object):
-    pos: Pos
+class Include(ModelBase):
     filename: String
 
+
 @attrs(auto_attribs=True)
-class BinaryInclude(object):
-    pos: Pos
+class BinaryInclude(ModelBase):
     filename: str
 
 
 @attrs(auto_attribs=True)
 class Label(Expr):
-    pos: Pos
     name: str
     addr: int = 0
 
 
 @attrs(auto_attribs=True)
 class ExprUnaryOp(Expr):
-    pos: Pos
     arg: Expr
     opname = '?'
 
@@ -95,7 +106,6 @@ class ExprHibyte(ExprUnaryOp):
 
 @attrs(auto_attribs=True)
 class ExprBinaryOp(Expr):
-    pos: Pos
     left: Expr
     right: Expr
     opname = '?'
@@ -145,7 +155,6 @@ class ExprAnd(ExprBinaryOp):
 
 @attrs(auto_attribs=True)
 class ExprValue(Expr):
-    pos: Pos
     value: int
     base: int = 10
     width: int = 8
@@ -153,51 +162,45 @@ class ExprValue(Expr):
 
 @attrs(auto_attribs=True)
 class ExprName(Expr):
-    pos: Pos
     value: str
 
 
 @attrs(auto_attribs=True)
 class Define(Expr):
-    pos: Pos
     name: str
     expr: Expr
 
 
 @attrs(auto_attribs=True)
-class Scope(object):
+class Scope(ModelBase):
     pos: Pos = NullPos
 
 
 @attrs(auto_attribs=True)
-class EndScope(object):
+class EndScope(ModelBase):
     pos: Pos = NullPos
 
 
 @attrs(auto_attribs=True)
-class Fragment(object):
-    pos: Pos
+class Fragment(ModelBase):
     body: List[Any] = Factory(list)
 
 
 @attrs(auto_attribs=True)
-class Macro(object):
-    pos: Pos
+class Macro(ModelBase):
     name: str
     params: tuple
     body: Fragment
 
 
 @attrs(auto_attribs=True)
-class MacroCall(object):
-    pos: Pos
+class MacroCall(ModelBase):
     name: str
     args: tuple
 
 
 @attrs(auto_attribs=True)
-class Op(object):
-    pos: Pos
+class Op(ModelBase):
     name: str
     mode: AddressMode
     value: int
@@ -217,21 +220,18 @@ class Op(object):
 
 
 @attrs(auto_attribs=True)
-class Storage(object):
-    pos: Pos
+class Storage(ModelBase):
     width: int
     items: List[int]
 
 
 @attrs(auto_attribs=True)
-class Segment(object):
-    pos: Pos
+class Segment(ModelBase):
     name: str
     start: [int, None]
 
 
 @attrs(auto_attribs=True)
-class Dim(object):
-    pos: Pos
+class Dim(ModelBase):
     length: Expr
     init: List[Expr] = Factory(list)

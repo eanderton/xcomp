@@ -2,6 +2,7 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+import logging
 from .cpu6502 import opcode_xref
 from .cpu6502 import AddressMode
 from .model import *
@@ -10,6 +11,9 @@ from .reduce_parser import ParseError
 from .reduce_parser import Token
 from .reduce_parser import TokenList
 
+log = logging.getLogger(__name__)
+
+
 # TODO: add support for associating end-line comments with a statement
 # TODO: somehow detect and store "whole-line" comments
 grammar = r"""
@@ -17,9 +21,10 @@ goal            = (include / macro / def / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
                   encoding / scope / endscope / dim / bin /pragma /
-                  label / oper / macro_call / eol_tok / _
+                  label / oper / macro_call / eol / _
 
-comment         = ~r";\s*.*(?=\n|$)"
+comment         = semi_tok ~r".*(?=\n|$)"
+eol             = _ eol_tok
 
 include         = include_tok sp string
 
@@ -116,6 +121,7 @@ hash_tok        = "#"
 lessthan_tok    = "<"
 morethan_tok    = ">"
 colon_tok       = ":"
+semi_tok        = ";"
 asterisk_tok    = "*"
 period_tok      = "."
 eol_tok         = _ ~r"\n"
@@ -212,7 +218,7 @@ oper = op_adc / op_and / op_asl / op_bcc / op_bcs / op_beq / op_bit / op_bmi /
        op_sbc / op_sec / op_sed / op_sei / op_sta / op_stx / op_sty / op_tax /
        op_tay / op_tsx / op_txa / op_txs / op_tya
 
-__ignored       = "comment" / ~r".*_tok" / "sp" / "_"
+__ignored       = ~r".*_tok" / "sp" / "_"
 """
 
 
@@ -220,12 +226,31 @@ class Parser(ReduceParser):
 
     def __init__(self):
         super().__init__(grammar=grammar)
+        self.last_token = None
 
     def error_generic(self, e):
         from parsimonious.exceptions import IncompleteParseError
         if isinstance(e, IncompleteParseError):
             return 'Invalid syntax. Expected directive, macro, label, or operation'
         return super().error_generic(e)
+
+    def visit(self, node):
+        result = super().visit(node)
+        if not isinstance(result, TokenList):
+            self.last_token = result
+        return result
+
+    def visit_eol(self, pos):
+        self.last_token = None
+
+    def visit_comment(self, pos, value):
+        full_line = self.last_token is None
+        result = Comment(pos, full_line, value.text)
+        if not full_line:
+            self.last_token.comment = result
+            result = None
+        self.last_token = None
+        return result
 
     def visit_pragma(self, pos, name, expr):
         return Pragma(pos, name.value, expr)
@@ -294,7 +319,8 @@ class Parser(ReduceParser):
 
     ### STRING ###
 
-    visit_string = String
+    def visit_string(self, pos, *chars):
+        return String(pos, ''.join(chars))
 
     def visit_stringchar(self, pos, lit):
         return lit.text

@@ -66,8 +66,6 @@ def fixture(name, handler):
     return wrapper
 
 
-# TODO: pretty printing on debug messages - use logging?
-# TODO: encoding support for the data
 def print_hex(printer, data, start=0, end=0xFFFF, stride=16):
     for line_start in range(start, end, stride):
         line_end = min(line_start + stride, end)

@@ -29,11 +29,6 @@ class IgnoredTest(ParserTest):
         result = self.parse('\n', 'goal')
         self.assertEqual(result, [])
 
-    def test_comment(self):
-        result = self.parse('''
-        ; hello world
-        ''', 'goal')
-        self.assertEqual(result, [])
 
 class StatementSeparatorTest(ParserTest):
     def test_sep_newline(self):
@@ -256,3 +251,34 @@ class ExceptionTest(ParserTest):
                 r"<internal> \(1, 1\): Invalid syntax. "
                 r"Expected directive, macro, label, or operation"):
             self.parse('.foobar', 'goal')
+
+
+class CommentTest(ParserTest):
+    def test_full_line_comment(self):
+        result = self.parse("""; foo bar baz""")
+        self.assertEqual(result, [
+            Comment(pos=Pos(start=0, end=13, context='<internal>'),
+                full_line=True, text=' foo bar baz'),
+        ])
+
+    def test_full_line_multi(self):
+        result = self.parse(""";foo\n;bar\n;baz""")
+        self.assertEqual(result, [
+            Comment(pos=Pos(start=0, end=4, context='<internal>'),
+                full_line=True, text='foo'),
+            Comment(pos=Pos(start=5, end=9, context='<internal>'),
+                full_line=True, text='bar'),
+            Comment(pos=Pos(start=10, end=14, context='<internal>'),
+                full_line=True, text='baz'),
+        ])
+
+    def test_end_line_comment(self):
+        result = self.parse(""".pragma foo bar;baz""")
+        self.assertEqual(len(result), 1)
+        pragma = result[0]
+        self.assertEqual(pragma.name, 'foo')
+        self.assertEqual(pragma.expr.value, 'bar')
+        self.assertEqual(pragma.comment.text, 'baz')
+        self.assertEqual(pragma.comment.full_line, False)
+
+
