@@ -63,7 +63,6 @@ class BinaryInclude(ModelBase):
 @attrs(auto_attribs=True)
 class Label(Expr):
     name: str
-    addr: int = 0
 
 
 @attrs(auto_attribs=True)

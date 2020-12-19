@@ -15,6 +15,7 @@ from .preprocessor import PreProcessor
 
 log = logging.getLogger(__name__)
 
+# TODO: patch dim and var to work with forward references
 
 class SegmentData(object):
     def __init__(self, default_start):
@@ -128,6 +129,19 @@ class Compiler(CompilerBase):
                 return False
         self.fixups[:] = filterfalse(attempt, self.fixups)
 
+    def _repeat_init(self, length, init):
+        """Dumps repetitions of init into memory at offset, up to length bytes."""
+        init_bytes = []
+        for item in init:
+            _, expr_bytes = self.eval.get_expr_bytes(item)
+            init_bytes.extend(expr_bytes)
+        init_len = len(init_bytes)
+        end = self.seg.offset + length
+        for ii in range(self.seg.offset, end, init_len):
+            self.data[ii:ii+init_len] = init_bytes
+        self.data[ii:end] = init_bytes[0:end-ii]
+        self.seg.offset += length
+
     @singledispatchmethod
     def _compile(self, item):
         raise Exception(f'no defined compile handler for item: {type(item)}')
@@ -167,18 +181,12 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_define(self, define: Define):
-        if define.name in self.eval.scope:
-            self._error(define.pos,
-                    f'Identifier "{define.name}" is already defined in scope')
-        self.eval.scope[define.name] = define
+        self.eval.add_label(define.pos, define.name, define.expr)
 
     @_compile.register
     def _compile_label(self, label: Label):
-        if label.name in self.eval.scope:
-            self._error(label.pos,
-                    f'Identifier "{label.name}" is already defined in scope')
-        self.eval.scope[label.name] = label
         label.addr = self.seg.offset
+        self.eval.add_label(label.pos, label.name, self.seg.offset)
 
     @_compile.register
     def _compile_storage(self, storage: Storage):
@@ -190,20 +198,24 @@ class Compiler(CompilerBase):
                 self.fixups.append(fixup)
             self.seg.offset += storage.width
 
-    # TODO: patch to work with forward references
     @_compile.register
     def _compile_dim(self, dim: Dim):
         length = self.eval.eval(dim.length)
-        init_bytes = []
-        for item in dim.init:
-            _, expr_bytes = self.eval.get_expr_bytes(item)
-            init_bytes.extend(expr_bytes)
-        init_len = len(init_bytes)
-        end = self.seg.offset + length
-        for ii in range(self.seg.offset, end, init_len):
-            self.data[ii:ii+init_len] = init_bytes
-        self.data[ii:end] = init_bytes[0:end-ii]
-        self.seg.offset += length
+        self._repeat_init(length, dim.init)
+
+    @_compile.register
+    def _compile_var(self, var: Var):
+        self.eval.add_label(var.pos, var.name, self.seg.offset)
+        size = self.eval.eval(var.typeval)
+        if var.count is None:
+            count = 1
+        else:
+            count = self.eval.eval(var.count)
+        length = count * size
+        if var.init:
+            self._repeat_init(length, var.init)
+        else:
+            self.seg.offset += length
 
     @_compile.register
     def _compile_segment(self, segment: Segment):
@@ -223,7 +235,7 @@ class Compiler(CompilerBase):
                 # there is enough space to provide the argument and resolve
                 # this fixup later.
                 op.promote16bits()
-                self.fixups.append(fixup())
+                self.fixups.append(fixup)
                 self.seg.offset += op.width
         else:
             self.data[self.seg.offset] = op.value

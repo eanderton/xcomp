@@ -27,9 +27,19 @@ class Evaluator(CompilerBase):
     def scope(self):
         return self.scope_stack[-1]
 
+    def add_label(self, pos, name, expr):
+        if name in self.scope:
+            self._error(pos,
+                    f'Identifier "{name}" is already defined in scope')
+        self.scope[name] = expr
+
     @singledispatchmethod
     def eval(self, expr):
         return value
+
+    @eval.register
+    def _eval_int(self, expr: int):
+        return expr
 
     @eval.register
     def _eval_name(self, expr: ExprName):
@@ -44,7 +54,7 @@ class Evaluator(CompilerBase):
         return self.eval(value)
 
     @eval.register
-    def _eval_value(self, expr:ExprValue):
+    def _eval_value(self, expr: ExprValue):
         return expr.value
 
     @eval.register
@@ -54,14 +64,6 @@ class Evaluator(CompilerBase):
     @eval.register
     def _eval_unary_op(self, expr:ExprUnaryOp):
         return expr.oper(self.eval(expr.arg))
-
-    @eval.register
-    def _eval_define(self, expr:Define):
-        return self.eval(expr.expr)
-
-    @eval.register
-    def _eval_label(self, expr:Label):
-        return expr.addr
 
     @eval.register
     def _eval_string(self, expr:String):
