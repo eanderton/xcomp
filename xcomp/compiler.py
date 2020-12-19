@@ -4,7 +4,9 @@
 
 import logging
 import codecs
+import cbmcodecs
 from functools import singledispatchmethod
+from functools import partial
 from itertools import filterfalse
 from .model import *
 from .eval import Evaluator
@@ -53,7 +55,7 @@ class Compiler(CompilerBase):
     def __init__(self, ctx_manager):
         super().__init__(ctx_manager)
         self.data = bytearray(0xFFFF)
-        self.eval = Evaluator(self.data, ctx_manager)
+        self.eval = Evaluator(ctx_manager)
         self.segments = {
             'zero': SegmentData(0x0000),
             'bss':  SegmentData(0x0100),
@@ -64,11 +66,61 @@ class Compiler(CompilerBase):
         self.pragma = {}
         self.fixups = []
 
+    def resolve_expr(self, addr, expr):
+        value, expr_bytes = self.eval.get_expr_bytes(expr)
+        vlen = len(expr_bytes)
+        for ii in range(vlen):
+            self.data[addr + ii] = expr_bytes[ii]
+        return vlen
+
+    def resolve_op(self, opcode, addr, expr):
+        value, expr_bytes = self.eval.get_expr_bytes(expr)
+        vlen = len(expr_bytes)
+
+        # operations can't take on more than 2 bytes as an argument
+        if vlen > 2:
+            self._error(expr.pos,
+                    f'Expresssion evalutes to {vlen} bytes; operations can only take up to 2.')
+
+        # special case: reduce argument to a 8 bit relative offset
+        if opcode.mode == AddressMode.relative:
+            jmp = (value - addr - 2)
+            if jmp > 127 or jmp < -128:
+                self._error(expr.pos,
+                        f'Relative jump for {opcode.name} is out of range.')
+            expr_bytes = [jmp & 0xFF]
+            vlen = 1
+
+        # special case: use single-byte address if that's all we have
+        if opcode.mode in [AddressMode.zeropage, AddressMode.zeropage_x,
+                AddressMode.zeropage_y, AddressMode.immediate]:
+            if lobyte(value) == value:
+                vlen = 1
+                log.debug('optimizing to single-byte arg %s %s %s', value,
+                        vlen, expr_bytes)
+
+        # make sure we don't have too many bytes
+        if vlen == 2:
+            log.debug('promoting: %s %s', opcode.value, opcode.mode)
+            if not opcode.promote16bits():
+                self._error(expr.pos,
+                        f'operation {opcode.name} cannot take a 16 bit value')
+            log.debug('promoted to: %s %s', opcode.value, opcode.mode)
+
+        # emit op byte
+        self.data[addr] = opcode.value
+        addr += 1
+
+        # emit args and return effective length
+        for ii in range(vlen):
+            self.data[addr + ii] = expr_bytes[ii]
+        return 1 + vlen
+
     def resolve_fixups(self, must_pass=False):
         def attempt(fixup):
             try:
                 log.debug('fixing up: %s', fixup)
-                self.eval.resolve_expr(*fixup)
+                fixup()
                 return True
             except:
                 if must_pass:
@@ -131,9 +183,9 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_storage(self, storage: Storage):
         for ii in range(len(storage.items)):
-            fixup = (None, self.seg.offset, storage.items[ii])
+            fixup = partial(self.resolve_expr, self.seg.offset, storage.items[ii])
             try:
-                self.eval.resolve_expr(*fixup)
+                fixup()
             except Exception as e:
                 self.fixups.append(fixup)
             self.seg.offset += storage.width
@@ -162,15 +214,16 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_op(self, op: Op):
         if op.arg:
+            fixup = partial(self.resolve_op, op, self.seg.offset, op.arg)
             try:
-                self.seg.offset += self.eval.resolve_expr(
-                        op, self.seg.offset, op.arg)
+                self.seg.offset += fixup()
             except:
-                # Assume that the arg expression cannot be resolved w/o some
-                # other label defined after this line.  Make the arg width
-                # 16 bits and log a fixup to be resolved later
+                # Assume that the arg expression cannot be resolved due to
+                # a forward reference.  Make the arg width to ensure that
+                # there is enough space to provide the argument and resolve
+                # this fixup later.
                 op.promote16bits()
-                self.fixups.append([op, self.seg.offset, op.arg])
+                self.fixups.append(fixup())
                 self.seg.offset += op.width
         else:
             self.data[self.seg.offset] = op.value
