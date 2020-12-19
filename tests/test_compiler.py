@@ -60,7 +60,7 @@ class PreprocessorTest(TestBase):
             .macro foobar, value
                 nop
                 adc #value
-            .endmacro
+            .end
                 .text 0x8000
             start:
                 lda #$80
@@ -80,7 +80,7 @@ class PreprocessorTest(TestBase):
                 nop
                 adc #value
             ; <<internal>>
-            .endscope
+            .end
             """)
 
     def test_include(self):
@@ -168,7 +168,7 @@ class CompilerTest(TestBase):
         .scope
         .def foo $1234
         .word foo
-        .endscope
+        .end
         .word foo
         """)
         self.compile('root.asm')

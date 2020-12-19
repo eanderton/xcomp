@@ -209,7 +209,7 @@ class MacroTest(ParserTest):
         ])
 
     def test_macro(self):
-        result = self.parse(""".macro foo .endmacro""", 'macro')
+        result = self.parse(""".macro foo .end""", 'macro')
         self.assertEqual(result.name, 'foo')
         self.assertEqual(result.params, tuple())
         self.assertEqual(result.body, tuple())
@@ -218,7 +218,7 @@ class MacroTest(ParserTest):
         self.parser.debug = True
         result = self.parse(""".macro foo, a,b,c
         nop
-        .endmacro""", 'macro')
+        .end""", 'macro')
         self.assertEqual(result.name, 'foo')
         self.assertEqual(result.params, ('a','b','c'))
         print('body:', result.body)

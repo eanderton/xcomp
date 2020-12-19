@@ -23,6 +23,7 @@ model_stylesheet = {
 
 
 # TODO: add support for indentation
+# TODO: add support for macro, include, and bin
 
 class ModelPrinter(StylePrinter):
     def __init__(self, *args, **kwargs):
@@ -116,7 +117,7 @@ class ModelPrinter(StylePrinter):
     @print.register
     def _print_endscope(self, endscope: EndScope):
         self.print(endscope.pos)
-        self.scope('.endscope')
+        self.scope('.end')
         return self.eol(endscope)
 
     @print.register

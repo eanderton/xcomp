@@ -20,10 +20,10 @@ log = logging.getLogger(__name__)
 # TODO: implicit functions for expr
 
 grammar = r"""
-goal            = (include / macro / def / core_syntax)*
+goal            = (include / macro / scope / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
-                  encoding / scope / endscope / dim / bin / var /
+                  def / encoding / dim / bin / var /
                   pragma / label / oper / macro_call / eol / _
 
 comment         = semi_tok ~r".*(?=\n|$)"
@@ -42,8 +42,8 @@ segment_name    = "zero" / "text" / "data" / "bss"
 
 encoding        = encoding_tok _ string
 
-scope           = scope_tok _
-endscope        = endscope_tok _
+scope           = scope_tok _ core_syntax* _ endscope
+endscope        = _ end_tok
 
 dim             = dim_tok sp expr _ (comma_tok _ expr)*
 bin             = bin_tok sp string
@@ -52,7 +52,7 @@ var             = var_tok sp name sp expr _ (comma_tok _ expr)*
 
 pragma          = pragma_tok _ name _ expr
 
-macro           = macro_tok _ macro_params _ macro_body _ endmacro_tok
+macro           = macro_tok _ macro_params _ macro_body _ end_tok
 macro_params    = name _ (comma_tok _ macro_params _)?
 macro_body      = core_syntax*
 
@@ -101,14 +101,13 @@ byte_tok        = ".byte"
 word_tok        = ".word"
 include_tok     = ".include"
 scope_tok       = ".scope"
-endscope_tok    = ".endscope"
 bin_tok         = ".bin"
 dim_tok         = ".dim"
 var_tok         = ".var"
 pragma_tok      = ".pragma"
 def_tok         = ".def"
 macro_tok       = ".macro"
-endmacro_tok    = ".endmacro"
+end_tok         = ".end"
 bang_tok        = "!"
 percent_tok     = "%"
 hex_tok         = ~r"\$|0x"
@@ -274,8 +273,11 @@ class Parser(ReduceParser):
     def visit_bin(self, pos, filename):
         return BinaryInclude(pos, filename.value)
 
-    visit_scope = Scope
-    visit_endscope = EndScope
+    def visit_scope(self, pos, *tokens):
+        return TokenList([Scope(pos)] + list(tokens))
+
+    def visit_endscope(self, pos):
+        return EndScope(pos)
 
     ### MACRO ###
 
