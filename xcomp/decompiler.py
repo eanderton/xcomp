@@ -89,8 +89,16 @@ class ModelPrinter(StylePrinter):
     @print.register
     def _print_dim(self, dim: Dim):
         self.print(dim.pos)
-        self.directive('.dim ').print(dim.length).print(dim.init)
+        self.directive('.dim ').print(dim.length).text(' ').print(dim.init)
         return self.eol(dim)
+
+    @print.register
+    def _print_var(self, var: Var):
+        self.print(var.pos)
+        self.directive('.var ').ident(var.name).print(var.length)
+        if dim.init:
+            self.text(', ').print(dim.init)
+        return self.eol(var)
 
     @print.register
     def _print_pragma(self, pragma: Pragma):

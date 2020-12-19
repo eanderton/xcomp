@@ -414,21 +414,8 @@ class VarTest(TestBase):
         """)
         self.compile('root.asm')
         self.assertDataEqual(0x0100, 0x0106, [
-            0xFF, 0x00, 0x00, 0x01, 0x01, 0xEA,
-        ])
-
-    def test_var_count(self):
-        self.set_file('root.asm', """
-        .text $0100
-        .byte $FF
-        .var foo 2,3
-        .word foo
-        nop
-        """)
-        self.compile('root.asm')
-        self.assertDataEqual(0x0100, 0x010A, [
             0xFF,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
             0x01, 0x01,
             0xEA,
         ])
@@ -437,7 +424,7 @@ class VarTest(TestBase):
         self.set_file('root.asm', """
         .text $0100
         .byte $FF
-        .var foo 2,3, $CC, $DD
+        .var foo 2*3, $CC, $DD
         .word foo
         nop
         """)

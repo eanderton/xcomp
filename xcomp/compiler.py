@@ -136,10 +136,11 @@ class Compiler(CompilerBase):
             _, expr_bytes = self.eval.get_expr_bytes(item)
             init_bytes.extend(expr_bytes)
         init_len = len(init_bytes)
-        end = self.seg.offset + length
-        for ii in range(self.seg.offset, end, init_len):
-            self.data[ii:ii+init_len] = init_bytes
-        self.data[ii:end] = init_bytes[0:end-ii]
+        if init_len > 0:
+            end = self.seg.offset + length
+            for ii in range(self.seg.offset, end, init_len):
+                self.data[ii:ii+init_len] = init_bytes
+            self.data[ii:end] = init_bytes[0:end-ii]
         self.seg.offset += length
 
     @singledispatchmethod
@@ -206,16 +207,8 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_var(self, var: Var):
         self.eval.add_label(var.pos, var.name, self.seg.offset)
-        size = self.eval.eval(var.typeval)
-        if var.count is None:
-            count = 1
-        else:
-            count = self.eval.eval(var.count)
-        length = count * size
-        if var.init:
-            self._repeat_init(length, var.init)
-        else:
-            self.seg.offset += length
+        length = self.eval.eval(var.length)
+        self._repeat_init(length, var.init)
 
     @_compile.register
     def _compile_segment(self, segment: Segment):

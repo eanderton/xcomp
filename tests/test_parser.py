@@ -284,27 +284,18 @@ class CommentTest(ParserTest):
 
 class VarTest(ParserTest):
     def test_var_simple(self):
-        result = self.parse(""".var foo 1""")
+        result = self.parse(""".var foo 9""")
         self.assertEqual(result, [
-            Var(pos=Pos(start=0, end=10), name='foo', count=None, init=tuple(),
-                typeval=ExprValue(Pos(start=9, end=10), value=1)),
+            Var(pos=Pos(start=0, end=10), name='foo', init=tuple(),
+                length=ExprValue(Pos(start=9, end=10), value=9)),
         ])
 
-    def test_var_count(self):
-        result = self.parse(""".var foo 1, 10""")
-        self.assertEqual(len(result), 1)
-        var = result[0]
-        self.assertEqual(var.name, 'foo')
-        self.assertEqual(var.typeval.value, 1)
-        self.assertEqual(var.count.value, 10)
-
     def test_var_init(self):
-        result = self.parse(""".var foo 2,30, 1, 2, 3""")
+        result = self.parse(""".var foo 2, 1, 2, 3""")
         self.assertEqual(len(result), 1)
         var = result[0]
         self.assertEqual(var.name, 'foo')
-        self.assertEqual(var.typeval.value, 2)
-        self.assertEqual(var.count.value, 30)
+        self.assertEqual(var.length.value, 2)
         self.assertEqual(len(var.init), 3)
         self.assertEqual(tuple([x.value for x in var.init]), (1, 2, 3))
 

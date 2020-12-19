@@ -10,6 +10,7 @@ from .cpu6502 import AddressMode
 
 log = logging.getLogger(__name__)
 
+# TODO: find a way to handle cyclic references
 
 class Evaluator(CompilerBase):
     def __init__(self, ctx_manager):

@@ -13,10 +13,11 @@ from .reduce_parser import TokenList
 
 log = logging.getLogger(__name__)
 
+
+# TODO: .end token for all scoped decls
 # TODO: .struct ?
 # TODO: .def call arguments
 # TODO: implicit functions for expr
-# TODO: .var name width/stuct (, count)? (, init_expr)*
 
 grammar = r"""
 goal            = (include / macro / def / core_syntax)*
@@ -303,8 +304,8 @@ class Parser(ReduceParser):
     def visit_dim(self, pos, length, *exprs):
         return Dim(pos, length, exprs)
 
-    def visit_var(self, pos, name, typeval=None, count=None, *init):
-        return Var(pos, name.value, typeval, count, init)
+    def visit_var(self, pos, name, length, *init):
+        return Var(pos, name.value, length, init)
 
     ### EXPRESSIONS ###
 
