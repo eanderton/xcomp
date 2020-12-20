@@ -28,11 +28,11 @@ class Evaluator(CompilerBase):
     def scope(self):
         return self.scope_stack[-1]
 
-    def add_label(self, pos, name, expr):
+    def add_name(self, pos, name, item):
         if name in self.scope:
             self._error(pos,
                     f'Identifier "{name}" is already defined in scope')
-        self.scope[name] = expr
+        self.scope[name] = item
 
     @singledispatchmethod
     def eval(self, expr):

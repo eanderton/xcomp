@@ -14,20 +14,20 @@ from .reduce_parser import TokenList
 log = logging.getLogger(__name__)
 
 
-# TODO: .end token for all scoped decls
-# TODO: .struct ?
 # TODO: .def call arguments
 # TODO: implicit functions for expr
+# TODO; parens on macro-call to handle grammar ambiguity (also move sp to nbsp and refactor other items)
 
 grammar = r"""
-goal            = (include / macro / scope / core_syntax)*
+goal            = (include / macro / scope / struct / core_syntax)*
 
 core_syntax     = comment / byte_storage / word_storage / segment /
                   def / encoding / dim / bin / var /
-                  pragma / label / oper / macro_call / eol / _
+                  pragma / label / oper / macro_call / _
 
 comment         = semi_tok ~r".*(?=\n|$)"
-eol             = _ eol_tok
+
+struct          = struct_tok _ ident _ (var _)* end_tok
 
 include         = include_tok sp string
 
@@ -62,7 +62,6 @@ macro_args      = expr _ (comma_tok _ expr _)?
 label           = ident _ colon_tok
 name            = ident !colon_tok
 
-#expr16          = bang_tok expr
 expr16          = (bang_tok expr) / expr
 
 expr            = sub / add / or / and / negate / lobyte / hibyte / term
@@ -79,8 +78,9 @@ mul             = exp _ asterisk_tok _ exp
 div             = exp _ slash_tok _ exp
 
 exp             = pow / fact
-pow             = fact carrot_tok fact
-fact            = name / string / number / group_expr
+pow             = fact _ carrot_tok _ fact
+fact            = name_expr / string / number / group_expr
+name_expr       = ident ( period_tok ident)* !colon_tok
 
 group_expr      = lparen_tok _ expr _ rparen_tok
 
@@ -96,18 +96,19 @@ base10          = ~r"(\d+)"
 ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
 
 # asm grammar tokens
-encoding_tok    = ".encoding"
-byte_tok        = ".byte"
-word_tok        = ".word"
-include_tok     = ".include"
-scope_tok       = ".scope"
 bin_tok         = ".bin"
-dim_tok         = ".dim"
-var_tok         = ".var"
-pragma_tok      = ".pragma"
+byte_tok        = ".byte"
 def_tok         = ".def"
-macro_tok       = ".macro"
+dim_tok         = ".dim"
+encoding_tok    = ".encoding"
 end_tok         = ".end"
+include_tok     = ".include"
+macro_tok       = ".macro"
+pragma_tok      = ".pragma"
+scope_tok       = ".scope"
+struct_tok      = ".struct"
+var_tok         = ".var"
+word_tok        = ".word"
 bang_tok        = "!"
 percent_tok     = "%"
 hex_tok         = ~r"\$|0x"
@@ -130,9 +131,11 @@ colon_tok       = ":"
 semi_tok        = ";"
 asterisk_tok    = "*"
 period_tok      = "."
-eol_tok         = _ ~r"\n"
-_               = ~r"[ \t]*"  # whitespace(s)
-sp              = ~r"[ \t]+"  # syntactic space(s)
+
+# space handling
+eol             = comment? ~r"\n[ \t]*"
+_               = (~r"[ \t]+" / eol)?
+sp              = ~r"[ \t]+"
 
 # 6502 opcode tokens
 a_tok           = "a"
@@ -242,7 +245,7 @@ class Parser(ReduceParser):
 
     def visit(self, node):
         result = super().visit(node)
-        if not isinstance(result, TokenList):
+        if not isinstance(result, TokenList) and not isinstance(result, Comment):
             self.last_token = result
         return result
 
@@ -252,6 +255,7 @@ class Parser(ReduceParser):
     def visit_comment(self, pos, value):
         full_line = self.last_token is None
         result = Comment(pos, full_line, value.text)
+        log.debug('visit_comment: %s last_token: %s', result, self.last_token)
         if not full_line:
             self.last_token.comment = result
             result = None
@@ -309,6 +313,9 @@ class Parser(ReduceParser):
     def visit_var(self, pos, name, length, *init):
         return Var(pos, name.value, length, init)
 
+    def visit_struct(self, pos, name, *fields):
+        return Struct(pos, name.value, fields)
+
     ### EXPRESSIONS ###
 
     def visit_def(self, pos, name, expr):
@@ -328,6 +335,10 @@ class Parser(ReduceParser):
     visit_and = ExprAnd
     visit_div = ExprDiv
     visit_mul = ExprMul
+    visit_pow = ExprPow
+
+    def visit_name_expr(self, pos, *parts):
+        return ExprName(pos, '.'.join([x.value for x in parts]))
 
     ### STRING ###
 

@@ -16,6 +16,7 @@ from .preprocessor import PreProcessor
 log = logging.getLogger(__name__)
 
 # TODO: patch dim and var to work with forward references
+# TODO: move def, var, and label back to passing whole object to eval for label registration
 
 class SegmentData(object):
     def __init__(self, default_start):
@@ -182,12 +183,11 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_define(self, define: Define):
-        self.eval.add_label(define.pos, define.name, define.expr)
+        self.eval.add_name(define.pos, define.name, define.expr)
 
     @_compile.register
     def _compile_label(self, label: Label):
-        label.addr = self.seg.offset
-        self.eval.add_label(label.pos, label.name, self.seg.offset)
+        self.eval.add_name(label.pos, label.name, self.seg.offset)
 
     @_compile.register
     def _compile_storage(self, storage: Storage):
@@ -201,14 +201,23 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_dim(self, dim: Dim):
-        length = self.eval.eval(dim.length)
-        self._repeat_init(length, dim.init)
+        self._repeat_init(self.eval.eval(dim.length), dim.init)
 
     @_compile.register
     def _compile_var(self, var: Var):
-        self.eval.add_label(var.pos, var.name, self.seg.offset)
-        length = self.eval.eval(var.length)
-        self._repeat_init(length, var.init)
+        self.eval.add_name(var.pos, var.name, self.seg.offset)
+        self._repeat_init(self.eval.eval(var.length), var.init)
+
+    @_compile.register
+    def _compile_struct(self, struct: Struct):
+        size = 0
+        for field in struct.fields:
+            self.eval.add_name(field.pos,
+                    f'{struct.name}.{field.name}', size)
+            self.eval.add_name(field.pos,
+                    f'{struct.name}.{field.name}.size', field.length)
+            size += self.eval.eval(field.length)
+        self.eval.add_name(struct.pos, f'{struct.name}.size', size)
 
     @_compile.register
     def _compile_segment(self, segment: Segment):

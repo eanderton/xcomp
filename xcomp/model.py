@@ -166,7 +166,7 @@ class ExprName(Expr):
 
 
 @attrs(auto_attribs=True)
-class Define(Expr):
+class Define(ModelBase):
     name: str
     expr: Expr
 
@@ -242,3 +242,8 @@ class Var(ModelBase):
     name: str
     length: Expr
     init: List[Expr] = Factory(list)
+
+@attrs(auto_attribs=True)
+class Struct(ModelBase):
+    name: str
+    fields: List[Var] = Factory(list)

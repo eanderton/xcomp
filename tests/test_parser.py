@@ -2,11 +2,15 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+import logging
 import unittest
 from xcomp.parser import *
 from xcomp.model import *
 #from xcomp.reduce_parser import ParseError
 from xcomp.cpu6502 import AddressMode
+
+logging.getLogger('xcomp.reduce_parser').setLevel(logging.DEBUG)
+logging.getLogger('xcomp.parser').setLevel(logging.DEBUG)
 
 
 class ParserTest(unittest.TestCase):
@@ -299,3 +303,27 @@ class VarTest(ParserTest):
         self.assertEqual(len(var.init), 3)
         self.assertEqual(tuple([x.value for x in var.init]), (1, 2, 3))
 
+
+class StructTest(ParserTest):
+    def test_struct_empty(self):
+        result = self.parse(".struct foo .end")
+        self.assertEqual(result, [
+            Struct(pos=Pos(start=0, end=16), name='foo', fields=tuple()),
+        ])
+
+    def test_struct_field(self):
+        result = self.parse("""
+        .struct foo
+            .var x 1  ; single byte field
+            .var y 2  ; word field
+        .end""")
+        self.assertEqual(len(result), 1)
+        struct = result[0]
+        self.assertEqual(struct.name, 'foo')
+        self.assertEqual(len(struct.fields), 2)
+        field_x = struct.fields[0]
+        field_y = struct.fields[1]
+        self.assertEqual(field_x.name, 'x')
+        self.assertEqual(field_x.length.value, 1)
+        self.assertEqual(field_y.name, 'y')
+        self.assertEqual(field_y.length.value, 2)

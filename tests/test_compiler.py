@@ -2,6 +2,7 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+import logging
 import unittest
 import hexdump
 import io
@@ -14,6 +15,8 @@ from xcomp.compiler import Compiler
 from xcomp.decompiler import ModelPrinter
 from xcomp.parser import Parser
 from xcomp.model import *
+
+logging.getLogger('xcomp.compiler').setLevel(logging.DEBUG)
 
 
 class TestBase(unittest.TestCase):
@@ -436,3 +439,35 @@ class VarTest(TestBase):
             0xEA,
         ])
 
+class StructTest(TestBase):
+    def test_struct_simple(self):
+        self.set_file('root.asm', """
+        .text $0100
+        .def word 2
+        .struct foo
+            .var x word
+            .var y word
+        .end
+        .byte foo.size, $FF
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0100, 0x0102, [
+            0x04, 0xFF,
+        ])
+
+    def test_struct_offsets(self):
+        self.set_file('root.asm', """
+        .text $0100
+        .def word 2
+        .struct foo
+            .var x word
+            .var y word
+        .end
+        .byte foo.x, foo.y, $FF
+        .byte foo.x.size, foo.y.size, $FF
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0100, 0x0106, [
+            0x00, 0x02, 0xFF,
+            0x02, 0x02, 0xFF,
+        ])
