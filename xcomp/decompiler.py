@@ -96,10 +96,19 @@ class ModelPrinter(StylePrinter):
     @print.register
     def _print_var(self, var: Var):
         self.print(var.pos)
-        self.directive('.var ').ident(var.name).print(var.length)
-        if dim.init:
-            self.text(', ').print(dim.init)
+        self.directive('.var ').ident(var.name).text(' ').print(var.size)
+        if var.init:
+            self.text(', ').print(var.init)
         return self.eol(var)
+
+    @print.register
+    def _print_struct(self, struct: Struct):
+        self.print(struct.pos)
+        self.directive('.struct ').ident(struct.name).nl()
+        for field in struct.fields:
+            self.text('    ').print(field)
+        self.directive('.end')
+        return self.eol(struct)
 
     @print.register
     def _print_pragma(self, pragma: Pragma):

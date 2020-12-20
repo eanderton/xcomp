@@ -443,7 +443,6 @@ class StructTest(TestBase):
     def test_struct_simple(self):
         self.set_file('root.asm', """
         .text $0100
-        .def word 2
         .struct foo
             .var x word
             .var y word
@@ -458,7 +457,6 @@ class StructTest(TestBase):
     def test_struct_offsets(self):
         self.set_file('root.asm', """
         .text $0100
-        .def word 2
         .struct foo
             .var x word
             .var y word

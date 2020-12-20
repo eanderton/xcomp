@@ -257,9 +257,16 @@ class Compiler(CompilerBase):
         return (start, end)
 
     def compile(self, ast):
+        # start scope with default implicit names
         self.eval.start_scope()
+        self.eval.scope['byte'] = 1
+        self.eval.scope['word'] = 2
+
+        # compile the AST
         for item in ast:
             self._compile(item)
+
+        # resolve fixups
         self.resolve_fixups(must_pass=True)
         self.eval.end_scope()
 
