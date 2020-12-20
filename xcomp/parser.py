@@ -180,6 +180,8 @@ op_cmp = "cmp" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x 
 op_cpx = "cpx" (arg_imm / arg_zp / arg_abs)
 op_cpy = "cpy" (arg_imm / arg_zp / arg_abs)
 op_dec = "dec" (arg_zp_x / arg_zp / arg_abs_x / arg_abs)?
+op_dex = "dex"
+op_dey = "dey"
 op_eor = "eor" (arg_imm / arg_ind_x / arg_ind_y / arg_zp_x / arg_zp / arg_abs_x /
                 arg_abs_y / arg_abs)
 op_inc = "inc" (arg_zp_x / arg_zp / arg_abs_x / arg_abs)
@@ -221,7 +223,8 @@ op_tya = "tya"
 
 oper = op_adc / op_and / op_asl / op_bcc / op_bcs / op_beq / op_bit / op_bmi /
        op_bne / op_bpl / op_brk / op_bvc / op_clc / op_cld / op_cli / op_clv /
-       op_cmp / op_cpx / op_cpy / op_dec / op_eor / op_inc / op_inx / op_iny /
+       op_cmp / op_cpx / op_cpy / op_dec / op_dex / op_dey /
+       op_eor / op_inc / op_inx / op_iny /
        op_jmp / op_jsr / op_lda / op_ldx / op_ldy / op_lsr / op_nop / op_ora /
        op_pha / op_php / op_pla / op_plp / op_rol / op_ror / op_rti / op_rts /
        op_sbc / op_sec / op_sed / op_sei / op_sta / op_stx / op_sty / op_tax /

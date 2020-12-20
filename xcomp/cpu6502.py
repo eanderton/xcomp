@@ -151,6 +151,12 @@ opcode_xref = {
         AddressMode.absolute_x : 0xde,
         AddressMode.implied    : 0x88,
     },
+    "dex": {
+        AddressMode.implied    : 0xca,
+    },
+    "dey": {
+        AddressMode.implied    : 0x88,
+    },
     "eor": {
         AddressMode.immediate  : 0x49,
         AddressMode.zeropage   : 0x45,
@@ -369,6 +375,8 @@ opcodes = {
         0xce: ("dec", AddressMode.absolute),
         0xde: ("dec", AddressMode.absolute_x),
         0x88: ("dec", AddressMode.implied),
+        0xca: ("dex", AddressMode.implied),
+        0x88: ("dey", AddressMode.implied),
         0x49: ("eor", AddressMode.immediate),
         0x45: ("eor", AddressMode.zeropage),
         0x55: ("eor", AddressMode.zeropage_x),
