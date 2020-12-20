@@ -291,7 +291,7 @@ class VarTest(ParserTest):
         result = self.parse(""".var foo 9""")
         self.assertEqual(result, [
             Var(pos=Pos(start=0, end=10), name='foo', init=tuple(),
-                length=ExprValue(Pos(start=9, end=10), value=9)),
+                size=ExprValue(Pos(start=9, end=10), value=9)),
         ])
 
     def test_var_init(self):
@@ -299,7 +299,7 @@ class VarTest(ParserTest):
         self.assertEqual(len(result), 1)
         var = result[0]
         self.assertEqual(var.name, 'foo')
-        self.assertEqual(var.length.value, 2)
+        self.assertEqual(var.size.value, 2)
         self.assertEqual(len(var.init), 3)
         self.assertEqual(tuple([x.value for x in var.init]), (1, 2, 3))
 
@@ -324,6 +324,6 @@ class StructTest(ParserTest):
         field_x = struct.fields[0]
         field_y = struct.fields[1]
         self.assertEqual(field_x.name, 'x')
-        self.assertEqual(field_x.length.value, 1)
+        self.assertEqual(field_x.size.value, 1)
         self.assertEqual(field_y.name, 'y')
-        self.assertEqual(field_y.length.value, 2)
+        self.assertEqual(field_y.size.value, 2)

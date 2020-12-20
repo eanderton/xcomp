@@ -310,8 +310,8 @@ class Parser(ReduceParser):
     def visit_dim(self, pos, length, *exprs):
         return Dim(pos, length, exprs)
 
-    def visit_var(self, pos, name, length, *init):
-        return Var(pos, name.value, length, init)
+    def visit_var(self, pos, name, size, *init):
+        return Var(pos, name.value, size, init)
 
     def visit_struct(self, pos, name, *fields):
         return Struct(pos, name.value, fields)

@@ -206,7 +206,7 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_var(self, var: Var):
         self.eval.add_name(var.pos, var.name, self.seg.offset)
-        self._repeat_init(self.eval.eval(var.length), var.init)
+        self._repeat_init(self.eval.eval(var.size), var.init)
 
     @_compile.register
     def _compile_struct(self, struct: Struct):
@@ -215,8 +215,8 @@ class Compiler(CompilerBase):
             self.eval.add_name(field.pos,
                     f'{struct.name}.{field.name}', size)
             self.eval.add_name(field.pos,
-                    f'{struct.name}.{field.name}.size', field.length)
-            size += self.eval.eval(field.length)
+                    f'{struct.name}.{field.name}.size', field.size)
+            size += self.eval.eval(field.size)
         self.eval.add_name(struct.pos, f'{struct.name}.size', size)
 
     @_compile.register

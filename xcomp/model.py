@@ -240,7 +240,7 @@ class Dim(ModelBase):
 @attrs(auto_attribs=True)
 class Var(ModelBase):
     name: str
-    length: Expr
+    size: Expr
     init: List[Expr] = Factory(list)
 
 @attrs(auto_attribs=True)
