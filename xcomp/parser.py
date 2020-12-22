@@ -28,7 +28,7 @@ core_syntax     = comment / byte_storage / word_storage / segment /
 comment         = semi_tok ~r".*(?=\n|$)"
 
 struct          = struct_tok sp ident (sp expr)? _ struct_body _ end_tok
-struct_body    = ((label / var / def) _)*
+struct_body    = (comment / label / var / def / _)*
 
 include         = include_tok sp string
 
