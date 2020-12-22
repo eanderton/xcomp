@@ -24,9 +24,7 @@ class TestBase(unittest.TestCase):
         self.maxDiff = None
         self.ctx_manager = FileContextManager()
         self.processor = PreProcessor(self.ctx_manager)
-        #self.processor.debug = True
         self.compiler = Compiler(self.ctx_manager)
-        self.compiler.debug = True
 
     def set_file(self, name, text):
         print(type(text))
@@ -468,4 +466,53 @@ class StructTest(TestBase):
         self.assertDataEqual(0x0100, 0x0106, [
             0x00, 0x02, 0xFF,
             0x02, 0x02, 0xFF,
+        ])
+
+    def test_struct_with_offset(self):
+        self.set_file('root.asm', """
+        .text $0100
+        .struct foo $0040
+            .var x word
+            .var y word
+        .end
+        .byte foo.x, foo.y, $FF
+        .byte foo.x.size, foo.y.size, $FF
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0100, 0x0106, [
+            0x040, 0x42, 0xFF,
+            0x02, 0x02, 0xFF,
+        ])
+
+    def test_struct_with_label(self):
+        self.set_file('root.asm', """
+        .text $0100
+        .struct foo $0040
+            x:
+            .var y word
+        .end
+        .byte foo.x, foo.y, $FF
+        .byte foo.y.size, $FF
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0100, 0x0105, [
+            0x040, 0x40, 0xFF,
+            0x02, 0xFF,
+        ])
+
+
+    def test_struct_with_define(self):
+        self.set_file('root.asm', """
+        .text $0100
+        .struct foo $0040
+            .def x $0CB
+            .var y word
+        .end
+        .byte foo.x, $FF
+        .byte foo.y.size, $FF
+        """)
+        self.compile('root.asm')
+        self.assertDataEqual(0x0100, 0x0104, [
+            0xCB, 0xFF,
+            0x02, 0xFF,
         ])

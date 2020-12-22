@@ -16,7 +16,6 @@ from .preprocessor import PreProcessor
 log = logging.getLogger(__name__)
 
 # TODO: patch dim and var to work with forward references
-# TODO: move def, var, and label back to passing whole object to eval for label registration
 
 class SegmentData(object):
     def __init__(self, default_start):
@@ -52,6 +51,7 @@ class SegmentData(object):
             self._end = value
         else:
             self._end = max(self._end, value)
+
 
 class Compiler(CompilerBase):
     def __init__(self, ctx_manager):
@@ -206,18 +206,27 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_var(self, var: Var):
         self.eval.add_name(var.pos, var.name, self.seg.offset)
+        self.eval.add_name(var.pos,
+                f'{var.name}.size', var.size)
         self._repeat_init(self.eval.eval(var.size), var.init)
 
     @_compile.register
     def _compile_struct(self, struct: Struct):
-        size = 0
+        # set up new segment to track offset
+        old_seg = self.seg
+        self.seg = SegmentData(0)
+        if struct.offset is not None:
+            self.seg.offset = self.eval.eval(struct.offset)
+
+        # compile fields within namespace
+        self.eval.start_scope(struct.name)
         for field in struct.fields:
-            self.eval.add_name(field.pos,
-                    f'{struct.name}.{field.name}', size)
-            self.eval.add_name(field.pos,
-                    f'{struct.name}.{field.name}.size', field.size)
-            size += self.eval.eval(field.size)
-        self.eval.add_name(struct.pos, f'{struct.name}.size', size)
+            self._compile(field)
+        self.eval.add_name(struct.pos, 'size', self.seg.offset)
+
+        # merge down scope and restore old segment
+        self.eval.end_scope(merge=True)
+        self.seg = old_seg
 
     @_compile.register
     def _compile_segment(self, segment: Segment):

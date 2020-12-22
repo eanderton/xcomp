@@ -61,7 +61,7 @@ class BinaryInclude(ModelBase):
 
 
 @attrs(auto_attribs=True)
-class Label(Expr):
+class Label(ModelBase):
     name: str
 
 
@@ -246,4 +246,5 @@ class Var(ModelBase):
 @attrs(auto_attribs=True)
 class Struct(ModelBase):
     name: str
+    offset: Expr
     fields: List[Var] = Factory(list)

@@ -308,7 +308,15 @@ class StructTest(ParserTest):
     def test_struct_empty(self):
         result = self.parse(".struct foo .end")
         self.assertEqual(result, [
-            Struct(pos=Pos(start=0, end=16), name='foo', fields=tuple()),
+            Struct(pos=Pos(start=0, end=16), name='foo', fields=tuple(),
+                offset=None),
+        ])
+
+    def test_struct_offset(self):
+        result = self.parse(".struct foo 100 .end")
+        self.assertEqual(result, [
+            Struct(pos=Pos(start=0, end=20), name='foo', fields=tuple(),
+                offset=ExprValue(Pos(start=12, end=15), value=100)),
         ])
 
     def test_struct_field(self):
@@ -327,3 +335,29 @@ class StructTest(ParserTest):
         self.assertEqual(field_x.size.value, 1)
         self.assertEqual(field_y.name, 'y')
         self.assertEqual(field_y.size.value, 2)
+
+    def test_struct_label(self):
+        result = self.parse("""
+        .struct foo
+            baz:
+        .end""")
+        self.assertEqual(len(result), 1)
+        struct = result[0]
+        self.assertEqual(struct.name, 'foo')
+        self.assertEqual(len(struct.fields), 1)
+        baz = struct.fields[0]
+        self.assertEqual(baz.name, 'baz')
+
+    def test_struct_def(self):
+        result = self.parse("""
+        .struct foo
+            .def baz 20
+        .end""")
+        self.assertEqual(len(result), 1)
+        struct = result[0]
+        self.assertEqual(struct.name, 'foo')
+        self.assertEqual(len(struct.fields), 1)
+        baz = struct.fields[0]
+        self.assertEqual(baz.name, 'baz')
+        self.assertEqual(baz.expr.value, 20)
+

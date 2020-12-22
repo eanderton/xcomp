@@ -17,22 +17,30 @@ class Evaluator(CompilerBase):
         super().__init__(ctx_manager)
         self.encoding = 'utf-8'
         self.scope_stack = []
+        self.namespace_stack = []
 
-    def start_scope(self):
+    def start_scope(self, namespace=None):
         self.scope_stack.append({})
+        self.namespace_stack.append(namespace)
 
-    def end_scope(self):
-        self.scope_stack.pop()
+    def end_scope(self, merge=False):
+        head = self.scope_stack.pop()
+        self.namespace_stack.pop()
+        if merge and len(self.scope_stack):
+            self.scope.update(head)
+        return head
 
     @property
     def scope(self):
         return self.scope_stack[-1]
 
     def add_name(self, pos, name, item):
-        if name in self.scope:
+        namespace = list([x for x in self.namespace_stack if x is not None])
+        realname = '.'.join(namespace + [name])
+        if realname in self.scope:
             self._error(pos,
-                    f'Identifier "{name}" is already defined in scope')
-        self.scope[name] = item
+                    f'Identifier "{realname}" is already defined in scope')
+        self.scope[realname] = item
 
     @singledispatchmethod
     def eval(self, expr):

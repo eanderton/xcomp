@@ -27,7 +27,8 @@ core_syntax     = comment / byte_storage / word_storage / segment /
 
 comment         = semi_tok ~r".*(?=\n|$)"
 
-struct          = struct_tok _ ident _ (var _)* end_tok
+struct          = struct_tok sp ident (sp expr)? _ struct_body _ end_tok
+struct_body    = ((label / var / def) _)*
 
 include         = include_tok sp string
 
@@ -79,8 +80,7 @@ div             = exp _ slash_tok _ exp
 
 exp             = pow / fact
 pow             = fact _ carrot_tok _ fact
-fact            = name_expr / string / number / group_expr
-name_expr       = ident ( period_tok ident)* !colon_tok
+fact            = name / string / number / group_expr
 
 group_expr      = lparen_tok _ expr _ rparen_tok
 
@@ -93,7 +93,7 @@ base2           = percent_tok ~r"[01]{1,16}"
 base16          = hex_tok ~r"[0-9a-fA-F]{1,4}"
 base10          = ~r"(\d+)"
 
-ident           = ~r"[_a-zA-Z][_a-zA-Z0-9]*"
+ident           = ~r"[_a-zA-Z][_a-zA-Z0-9.]*"
 
 # asm grammar tokens
 bin_tok         = ".bin"
@@ -316,8 +316,13 @@ class Parser(ReduceParser):
     def visit_var(self, pos, name, size, *init):
         return Var(pos, name.value, size, init)
 
-    def visit_struct(self, pos, name, *fields):
-        return Struct(pos, name.value, fields)
+    def visit_struct(self, pos, name, *args):
+        if args and isinstance(args[0], Expr):
+            offset = args[0]
+            args = args[1:]
+        else:
+            offset = None
+        return Struct(pos, name.value, offset, args)
 
     ### EXPRESSIONS ###
 
@@ -339,9 +344,6 @@ class Parser(ReduceParser):
     visit_div = ExprDiv
     visit_mul = ExprMul
     visit_pow = ExprPow
-
-    def visit_name_expr(self, pos, *parts):
-        return ExprName(pos, '.'.join([x.value for x in parts]))
 
     ### STRING ###
 
