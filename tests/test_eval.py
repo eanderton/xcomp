@@ -12,6 +12,7 @@ class TestBase(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
         self.ctx_manager = FileContextManager()
+        self.ctx_manager.files['<internal>'] = ''
         self.evaluator = Evaluator(self.ctx_manager)
 
     def eval(self, expr):
@@ -86,3 +87,15 @@ class TestNamespaces(TestBase):
             'foo.bar.baz': 100,
         }])
 
+
+class TestEval(TestBase):
+    def test_cyclic_reference(self):
+        e = self.evaluator
+        e.start_scope()
+        e.add_name(Pos(0, 0), 'foo', ExprName(Pos(0, 0), 'bar'))
+        e.add_name(Pos(0, 0), 'bar', ExprName(Pos(0, 0), 'baz'))
+        e.add_name(Pos(0, 0), 'baz', ExprName(Pos(0, 0), 'foo'))
+
+        with self.assertRaisesRegex(CompilationError,
+                r'<internal> \(1, 1\): cyclic reference when evaluating expression'):
+            self.eval(ExprName(Pos(0, 0), 'foo'))

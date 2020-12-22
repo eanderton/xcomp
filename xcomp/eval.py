@@ -10,7 +10,6 @@ from .cpu6502 import AddressMode
 
 log = logging.getLogger(__name__)
 
-# TODO: find a way to handle cyclic references
 
 class Evaluator(CompilerBase):
     def __init__(self, ctx_manager):
@@ -43,14 +42,14 @@ class Evaluator(CompilerBase):
         self.scope[realname] = item
 
     @singledispatchmethod
-    def eval(self, expr):
-        return value
+    def _eval(self, expr):
+        raise Exception('cannot eval expression of type {type(expr)}')
 
-    @eval.register
+    @_eval.register
     def _eval_int(self, expr: int):
         return expr
 
-    @eval.register
+    @_eval.register
     def _eval_name(self, expr: ExprName):
         value = None
         name = expr.value
@@ -62,19 +61,19 @@ class Evaluator(CompilerBase):
             self._error(expr.pos, f'Identifier {name} is undefined.')
         return self.eval(value)
 
-    @eval.register
+    @_eval.register
     def _eval_value(self, expr: ExprValue):
         return expr.value
 
-    @eval.register
+    @_eval.register
     def _eval_binary_op(self, expr:ExprBinaryOp):
         return expr.oper(self.eval(expr.left), self.eval(expr.right))
 
-    @eval.register
+    @_eval.register
     def _eval_unary_op(self, expr:ExprUnaryOp):
         return expr.oper(self.eval(expr.arg))
 
-    @eval.register
+    @_eval.register
     def _eval_string(self, expr:String):
         return expr.value
 
@@ -96,4 +95,9 @@ class Evaluator(CompilerBase):
                 ' '.join([f'{x:x}' for x in expr_bytes]))
         return value, expr_bytes
 
-
+    def eval(self, expr):
+        try:
+            return self._eval(expr)
+        except RecursionError as e:
+            self._error(expr.pos,
+                    f'cyclic reference when evaluating expression')
