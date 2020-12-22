@@ -58,6 +58,8 @@ class Application(object):
                 help='Output file')
         compiler.add_argument('--out-format', choices=['raw', 'prg'],
                 help='Output format')
+        compiler.add_argument('-m', '--mapfile', nargs='?',
+                help='Path to optional mapfile')
         compiler.set_defaults(fn=self.do_compile, **cli_defaults)
 
         dump = subparsers.add_parser('dump', parents=[flags, compiler_flags],
@@ -108,6 +110,10 @@ class Application(object):
         printer.text(f' - Size: ${end-start:04X} ({end-start}) bytes').nl()
         print_hex(printer, compiler.data, start, end)
 
+        printer.title('Map').nl()
+        for k, v in compiler.map.items():
+            self.printer.key(k).value(f'{v:04x}').nl()
+
     def do_compile(self):
         ctx_manager = FileContextManager(self.include)
         compiler = Compiler(ctx_manager)
@@ -124,6 +130,12 @@ class Application(object):
         with open(self.output, 'wb+') as f:
             f.write(header)
             f.write(compiler.data[start:end])
+
+        if self.mapfile:
+            with open(self.mapfile, 'wt+') as f:
+                for k, v in compiler.map.items():
+                    f.write(f'{k}: {v:04x}\n')
+
 
     def do_preprocess(self):
         ctx_manager = FileContextManager(self.include)

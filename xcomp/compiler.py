@@ -275,8 +275,11 @@ class Compiler(CompilerBase):
         for item in ast:
             self._compile(item)
 
-        # resolve fixups
+        # resolve fixups and save map
         self.resolve_fixups(must_pass=True)
+        self.map = {}
+        for k, v in self.eval.scope.items():
+            self.map[k] = self.eval.eval(v)
         self.eval.end_scope()
 
     def compile_file(self, filename):

@@ -49,6 +49,7 @@ cli_defaults = {
     'segment': shlex.split(os.environ.get('XCOMP_SEGMENT_OUT', '')),
     'out': os.environ.get('XCOMP_OUT', './out.bin'),
     'out_format': os.environ.get('XCOMP_OUT_FORMAT', 'raw'),
+    'mapfile': os.environ.get('XCOMP_MAPFILE', ''),
 }
 
 # style for diff output
