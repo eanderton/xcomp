@@ -74,6 +74,10 @@ class ExprUnaryOp(Expr):
     def oper(self, a):
         pass
 
+class ExprInvert(ExprUnaryOp):
+    opname = '~'
+    def oper(self, a):
+        return ~a
 
 class Expr8(ExprUnaryOp):
     opname = ''

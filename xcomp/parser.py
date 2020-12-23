@@ -65,10 +65,7 @@ name            = ident !colon_tok
 
 expr16          = (bang_tok expr) / expr
 
-expr            = sub / add / or / and / negate / lobyte / hibyte / term
-negate          = minus_tok _ term
-lobyte          = lessthan_tok _ term
-hibyte          = morethan_tok _ term
+expr            = sub / add / or / and / term
 add             = term _ plus_tok _ expr
 sub             = term _ minus_tok _ expr
 or              = term _ pipe_tok _ expr
@@ -80,9 +77,14 @@ div             = exp _ slash_tok _ exp
 
 exp             = pow / fact
 pow             = fact _ carrot_tok _ fact
-fact            = name / string / number / group_expr
+fact            = name / string / number / group_expr /
+                  invert / negate / lobyte / hibyte
 
 group_expr      = lparen_tok _ expr _ rparen_tok
+invert          = tilde_tok _ expr
+negate          = minus_tok _ expr
+lobyte          = lessthan_tok _ expr
+hibyte          = morethan_tok _ expr
 
 string          = quote_tok ((backslash_tok escape_char) / stringchar)* endquote_tok
 stringchar      = ~r'[^\\"]+'
@@ -109,6 +111,7 @@ scope_tok       = ".scope"
 struct_tok      = ".struct"
 var_tok         = ".var"
 word_tok        = ".word"
+tilde_tok       = "~"
 bang_tok        = "!"
 percent_tok     = "%"
 hex_tok         = ~r"\$|0x"
@@ -334,6 +337,7 @@ class Parser(ReduceParser):
 
     visit_expr8 = Expr8
     visit_expr16 = Expr16
+    visit_invert = ExprInvert
     visit_negate = ExprNegate
     visit_lobyte = ExprLobyte
     visit_hibyte = ExprHibyte
