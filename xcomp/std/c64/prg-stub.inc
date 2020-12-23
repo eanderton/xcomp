@@ -3,11 +3,11 @@
 ; PRG BASIC stub for LOAD/RUN
 .pragma c64_prg_start $0801
 .text $0801
+.scope 
 LINE_10:
     .word LINE_END
     .word 10 ; line number 
-    .byte TOK_SYS, SPACE, $32, $30, $36, $32 ; "SYS 2062" - jmp to $080E
-   ; .byte TOK_SYS, SPACE, $32, $30, $36, $34 ; "SYS 2064" - jmp to $0810
-    .byte $00 ; EOL
+    .byte TOK_SYS, " 2062", $00 ; jmp to $080E
 LINE_END:
     .word $0000 ; end of BASIC program (next line is $0000)
+.end

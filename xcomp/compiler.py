@@ -194,10 +194,12 @@ class Compiler(CompilerBase):
         for ii in range(len(storage.items)):
             fixup = partial(self.resolve_expr, self.seg.offset, storage.items[ii])
             try:
-                fixup()
+                vlen = fixup()
+                self.seg.offset += max(vlen, storage.width)
             except Exception as e:
                 self.fixups.append(fixup)
-            self.seg.offset += storage.width
+                self.seg.offset += storage.width
+                # TODO: bug - can't properly handle strings on forward reference
 
     @_compile.register
     def _compile_dim(self, dim: Dim):
