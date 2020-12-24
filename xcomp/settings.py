@@ -47,7 +47,7 @@ cli_defaults = {
     'trace': shlex.split(os.environ.get('XCOMP_TRACE', '')),
     'include': shlex.split(os.environ.get('XCOMP_INCLUDE', f'./ {module_path}')),
     'segment': shlex.split(os.environ.get('XCOMP_SEGMENT_OUT', '')),
-    'out': os.environ.get('XCOMP_OUT', './out.bin'),
+    'output': os.environ.get('XCOMP_OUTPUT', './out.bin'),
     'out_format': os.environ.get('XCOMP_OUT_FORMAT', 'raw'),
     'mapfile': os.environ.get('XCOMP_MAPFILE', ''),
 }

@@ -14,9 +14,9 @@ from .reduce_parser import TokenList
 log = logging.getLogger(__name__)
 
 
-# TODO: .def call arguments
-# TODO: implicit functions for expr
-# TODO; parens on macro-call to handle grammar ambiguity (also move sp to nbsp and refactor other items)
+# TODO: named scopes
+# TODO; parens on macro-call to handle grammar ambiguity
+# TODO: move sp to nbsp and refactor other items
 
 grammar = r"""
 goal            = (include / macro / scope / struct / core_syntax)*
@@ -58,7 +58,7 @@ macro_params    = name _ (comma_tok _ macro_params _)?
 macro_body      = core_syntax*
 
 macro_call      = name (sp macro_args)?
-macro_args      = expr _ (comma_tok _ expr _)?
+macro_args      = expr (_ comma_tok _ expr)*
 
 label           = ident _ colon_tok
 name            = ident !colon_tok

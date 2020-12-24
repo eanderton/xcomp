@@ -2,6 +2,7 @@
 # All rights reserved.
 # Published under the BSD license.  See LICENSE For details.
 
+import logging
 from functools import singledispatchmethod
 from .model import *
 from .parser import Parser
@@ -9,6 +10,7 @@ from .parser import ParseError
 from .compiler_base import CompilerBase
 from .compiler_base import FileContextException
 
+log = logging.getLogger(__name__)
 
 class PreProcessor(CompilerBase):
     '''Parses an input file and returns an AST stream representative of the parsed
@@ -70,7 +72,9 @@ class PreProcessor(CompilerBase):
         if not macro:
             self._error(call.pos, f'Macro {call.name} is not defined')
         if len(call.args) != len(macro.params):
-            self._error(call.args.pos,
+            log.debug('call: %s', call)
+            log.debug('macro: %s', macro)
+            self._error(call.pos,
                     f'Invalid number of arguments; expected {len(macro.params)}')
         yield Scope()
         for ii in range(len(call.args)):

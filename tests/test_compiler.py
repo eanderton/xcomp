@@ -104,6 +104,30 @@ class PreprocessorTest(TestBase):
             nop
         """)
 
+    def test_scope(self):
+        self.set_file('root.asm',"""
+        .macro foo
+        lda $40
+        adc #$80
+        .end
+        .scope
+        foo
+        .end
+        """)
+        self.assertAstEqual(self.parse('root.asm'), """
+        ; <root.asm>
+        .scope
+        ; <<internal>>
+        .scope
+        ; <root.asm>
+            lda $40
+            adc #$80
+        ; <<internal>>
+        .end
+        ; <root.asm>
+        .end
+        """)
+
 
 class CompilerTest(TestBase):
     def test_segment_expr(self):
