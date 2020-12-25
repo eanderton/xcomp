@@ -3,6 +3,7 @@
 # Published under the BSD license.  See LICENSE For details.
 
 import os
+import glob
 from attr import attrs
 from attr import Factory
 from typing import *
@@ -22,6 +23,11 @@ class FileContextManager():
             if os.path.isfile(test):
                 return test
         return None
+
+    def search_expr(self, glob_expr):
+        for inc in self.include_paths:
+            for result in glob.glob(os.path.join(inc, glob_expr), recursive=True):
+                yield result
 
     # TODO: rename to get_data()
     def get_text(self, filename, mode='rt'):

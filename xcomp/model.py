@@ -77,7 +77,8 @@ class ExprUnaryOp(Expr):
 class ExprInvert(ExprUnaryOp):
     opname = '~'
     def oper(self, a):
-        return ~a
+        clamp = 0xFF if is8bit(a) else 0xFFFF
+        return ~a & clamp
 
 class Expr8(ExprUnaryOp):
     opname = ''

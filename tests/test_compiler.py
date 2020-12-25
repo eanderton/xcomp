@@ -540,3 +540,41 @@ class StructTest(TestBase):
             0xCB, 0xFF,
             0x02, 0xFF,
         ])
+
+class MapTest(TestBase):
+    def test_mapped_symbols(self):
+        self.set_file('root.asm', """
+        .text $0100
+        baz:
+            nop
+        bar:
+            nop
+        .struct foo $0040
+            .var x word
+            .var y word
+        .end
+        """)
+        self.compile('root.asm')
+        self.assertEqual(self.compiler.map, {
+            'baz': 0x0100,
+            'bar': 0x0101,
+            'foo': 0x0040,
+            'foo.x': 0x0040,
+            'foo.y': 0x0042,
+        })
+
+
+class ScopeTest(TestBase):
+    def test_scope_pollution(self):
+        self.set_file('root.asm', """
+        .text $0100
+        .scope
+          .def foo XXX
+          lda foo
+        .end
+        .def foo 1234
+        nop
+        """)
+        with self.assertRaisesRegex(CompilationError,
+                r'root.asm \(3, 12\): Identifier XXX is undefined.'):
+            self.compile('root.asm')

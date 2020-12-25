@@ -67,6 +67,7 @@ class Compiler(CompilerBase):
         self.seg = self.segments['text']
         self.pragma = {}
         self.fixups = []
+        self.map = {}
 
     def resolve_expr(self, addr, expr):
         value, expr_bytes = self.eval.get_expr_bytes(expr)
@@ -187,16 +188,20 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_label(self, label: Label):
-        self.eval.add_name(label.pos, label.name, self.seg.offset)
+        offset = self.seg.offset
+        self.eval.add_name(label.pos, label.name, offset)
+        self.map[label.name] = offset
 
     @_compile.register
     def _compile_storage(self, storage: Storage):
         for ii in range(len(storage.items)):
-            fixup = partial(self.resolve_expr, self.seg.offset, storage.items[ii])
+            item = storage.items[ii]
             try:
-                vlen = fixup()
+                vlen = self.resolve_expr(self.seg.offset, item)
                 self.seg.offset += max(vlen, storage.width)
             except Exception as e:
+                fixup = partial(self.resolve_expr,
+                        self.seg.offset, self.eval.get_fixup(item))
                 self.fixups.append(fixup)
                 self.seg.offset += storage.width
                 # TODO: bug - can't properly handle strings on forward reference
@@ -207,10 +212,12 @@ class Compiler(CompilerBase):
 
     @_compile.register
     def _compile_var(self, var: Var):
-        self.eval.add_name(var.pos, var.name, self.seg.offset)
+        offset = self.seg.offset
+        self.eval.add_name(var.pos, var.name, offset)
         self.eval.add_name(var.pos,
                 f'{var.name}.size', var.size)
         self._repeat_init(self.eval.eval(var.size), var.init)
+        self.map[var.name] = offset
 
     @_compile.register
     def _compile_struct(self, struct: Struct):
@@ -218,7 +225,13 @@ class Compiler(CompilerBase):
         old_seg = self.seg
         self.seg = SegmentData(0)
         if struct.offset is not None:
-            self.seg.offset = self.eval.eval(struct.offset)
+            offset = self.eval.eval(struct.offset)
+            self.seg.offset = offset
+            self.map[struct.name] = offset
+
+        # set up new map to track symbols
+        old_map = self.map
+        self.map = {}
 
         # compile fields within namespace
         self.eval.start_scope(struct.name)
@@ -230,6 +243,11 @@ class Compiler(CompilerBase):
         self.eval.end_scope(merge=True)
         self.seg = old_seg
 
+        # merge down map and restore old map
+        for k, v in self.map.items():
+            old_map[f'{struct.name}.{k}'] = v
+        self.map = old_map
+
     @_compile.register
     def _compile_segment(self, segment: Segment):
         self.seg = self.segments[segment.name]
@@ -239,15 +257,16 @@ class Compiler(CompilerBase):
     @_compile.register
     def _compile_op(self, op: Op):
         if op.arg:
-            fixup = partial(self.resolve_op, op, self.seg.offset, op.arg)
             try:
-                self.seg.offset += fixup()
+                self.seg.offset += self.resolve_op(op, self.seg.offset, op.arg)
             except:
                 # Assume that the arg expression cannot be resolved due to
                 # a forward reference.  Make the arg width to ensure that
                 # there is enough space to provide the argument and resolve
                 # this fixup later.
                 op.promote16bits()
+                fixup = partial(self.resolve_op,
+                        op, self.seg.offset, self.eval.get_fixup(op.arg))
                 self.fixups.append(fixup)
                 self.seg.offset += op.width
         else:
@@ -272,16 +291,15 @@ class Compiler(CompilerBase):
         self.eval.start_scope()
         self.eval.scope['byte'] = 1
         self.eval.scope['word'] = 2
+        self.eval.scope['long'] = 4
 
         # compile the AST
         for item in ast:
             self._compile(item)
 
-        # resolve fixups and save map
+        # resolve fixups
+        log.debug('fixups %s', self.fixups)
         self.resolve_fixups(must_pass=True)
-        self.map = {}
-        for k, v in self.eval.scope.items():
-            self.map[k] = self.eval.eval(v)
         self.eval.end_scope()
 
     def compile_file(self, filename):

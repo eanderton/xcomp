@@ -52,8 +52,45 @@
     .def cr2.xscroll $07
 
     .var sprite_y_expansion byte   ; sprite y expansion
-    .var mem byte   ; memory pointers
+    .var mem byte   ; memory offsets
+   
+    ; bit 0: bitmap offset in VIC-II bank
+    ; 0 = $0000
+    ; 1 = $2000
+    .def mem.bitmap $01
+
+    ; bits 1-3: character memory in VIC-II bank
+    ; in alternating 8 and 2 page offsets
+    ; $D018 = %xxxx000x -> charmem is at $0000
+    ; $D018 = %xxxx001x -> charmem is at $0800
+    ; $D018 = %xxxx010x -> charmem is at $1000
+    ; $D018 = %xxxx011x -> charmem is at $1800
+    ; $D018 = %xxxx100x -> charmem is at $2000
+    ; $D018 = %xxxx101x -> charmem is at $2800
+    ; $D018 = %xxxx110x -> charmem is at $3000
+    ; $D018 = %xxxx111x -> charmem is at $3800
+    .def mem.char $0E
     
+    ; bits 4-7: screen offset in VIC-II bank
+    ; in 4 page ($0400) increments ($0000 through $3C00)
+    ; $D018 = %0000xxxx -> screenmem is at $0000
+    ; $D018 = %0001xxxx -> screenmem is at $0400
+    ; $D018 = %0010xxxx -> screenmem is at $0800
+    ; $D018 = %0011xxxx -> screenmem is at $0c00
+    ; $D018 = %0100xxxx -> screenmem is at $1000
+    ; $D018 = %0101xxxx -> screenmem is at $1400
+    ; $D018 = %0110xxxx -> screenmem is at $1800
+    ; $D018 = %0111xxxx -> screenmem is at $1c00
+    ; $D018 = %1000xxxx -> screenmem is at $2000
+    ; $D018 = %1001xxxx -> screenmem is at $2400
+    ; $D018 = %1010xxxx -> screenmem is at $2800
+    ; $D018 = %1011xxxx -> screenmem is at $2c00
+    ; $D018 = %1100xxxx -> screenmem is at $3000
+    ; $D018 = %1101xxxx -> screenmem is at $3400
+    ; $D018 = %1110xxxx -> screenmem is at $3800
+    ; $D018 = %1111xxxx -> screenmem is at $3c00
+    .def mem.screen $F0
+
     .def mem.vm13 $80
     .def mem.vm12 $40 
     .def mem.vm11 $20

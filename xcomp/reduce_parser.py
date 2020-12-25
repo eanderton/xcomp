@@ -15,8 +15,8 @@ log = logging.getLogger(__name__)
 
 @attrs(auto_attribs=True, slots=True)
 class Pos(object):
-    start: int
-    end: int
+    start: int = 0
+    end: int = 0
     context: str = '<internal>'
 
     @classmethod

@@ -14,33 +14,33 @@
 ; Execution time is 69 cycles
 
 .data
-seed: .word 0x0000
+    .var prng_seed word 
 
 .text
 prng:
-	lda seed+1
+	lda prng_seed+1
 	tax ; store copy of high byte
 	; compute seed+1 ($39>>1 = %11100)
 	lsr a; shift to consume zeroes on left...
 	lsr a
 	lsr a
-	sta seed+1 ; now recreate the remaining bits in reverse order... %111
+	sta prng_seed+1 ; now recreate the remaining bits in reverse order... %111
 	lsr a
-	eor seed+1
+	eor prng_seed+1
 	lsr a
-	eor seed+1
-	eor seed+0 ; recombine with original low byte
-	sta seed+1
+	eor prng_seed+1
+	eor prng_seed+0 ; recombine with original low byte
+	sta prng_seed+1
 	; compute seed+0 ($39 = %111001)
 	txa ; original high byte
-	sta seed+0
+	sta prng_seed+0
 	asl a
-	eor seed+0
+	eor prng_seed+0
 	asl a
-	eor seed+0
+	eor prng_seed+0
 	asl a
 	asl a
 	asl a
-	eor seed+0
-	sta seed+0
+	eor prng_seed+0
+	sta prng_seed+0
 	rts

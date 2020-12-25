@@ -78,21 +78,35 @@ class Application(object):
                 help='Source file to process')
         fmt.set_defaults(fn=self.do_fmt, **cli_defaults)
 
+        find = subparsers.add_parser('find', parents=[flags],
+                help='Locates files on the configured include path(s)')
+        find.add_argument('-i', '--include', nargs='+', action='extend',
+                help='Paths to search for included files')
+        find.add_argument('search',
+                help='Glob file pattern to search for.')
+        find.set_defaults(fn=self.do_find, **cli_defaults)
+
         parser.set_defaults(fn=self.do_help, topic=None, help_topics={
             'compile': compiler.format_help(),
             'dump': dump.format_help(),
             'pre': pre.format_help(),
             'fmt': fmt.format_help(),
+            'find': find.format_help(),
             'help': helper.format_help(),
         })
         self.parser = parser
+
+    @property
+    def ctx_manager(self):
+        if not getattr(self, '_ctx_manager', None):
+            self._ctx_manager = FileContextManager(self.include)
+        return self._ctx_manager
 
     def do_help(self):
         self.printer.text(self.help_topics.get(self.topic, self.parser.format_help()))
 
     def do_dump(self):
-        ctx_manager = FileContextManager(self.include)
-        compiler = Compiler(ctx_manager)
+        compiler = Compiler(self.ctx_manager)
         compiler.compile_file(self.source_file)
         start, end = compiler.get_extents(self.segment)
 
@@ -115,8 +129,7 @@ class Application(object):
             self.printer.key(k).value(f'{v:04x}').nl()
 
     def do_compile(self):
-        ctx_manager = FileContextManager(self.include)
-        compiler = Compiler(ctx_manager)
+        compiler = Compiler(self.ctx_manager)
         compiler.compile_file(self.source_file)
         start, end = compiler.get_extents(self.segment)
         header = None
@@ -138,14 +151,12 @@ class Application(object):
 
 
     def do_preprocess(self):
-        ctx_manager = FileContextManager(self.include)
-        ast = PreProcessor(ctx_manager).parse(self.source_file)
+        ast = PreProcessor(self.ctx_manager).parse(self.source_file)
         ModelPrinter(ansimode=not is_piped()).print_ast(ast)
 
     def do_fmt(self):
-        ctx_manager = FileContextManager(self.include)
-        text = ctx_manager.get_text(self.source_file)
-        ast = PreProcessor(ctx_manager).parse(self.source_file)
+        text = self.ctx_manager.get_text(self.source_file)
+        ast = PreProcessor(self.ctx_manager).parse(self.source_file)
 
         # print AST withoug ANSI formatting
         buf = io.StringIO()
@@ -161,10 +172,14 @@ class Application(object):
                 self.printer.write(style, line).nl()
         if not test:
             # rewrite the original file
-            real_filename = ctx_manager.search_file(self.source_file)
+            real_filename = self.ctx_manager.search_file(self.source_file)
             with open(real_filename) as f:
                 f.write(result)
         return bool(diff)
+
+    def do_find(self):
+        for filename in self.ctx_manager.search_expr(self.search):
+            self.printer.text(filename).nl()
 
     def run(self, argv):
         """

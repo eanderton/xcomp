@@ -179,10 +179,11 @@
 .end
 
 
+; sets the VIC-II bank using the lower two bits of CIA2 Port A
 ; expects a value of 0-3 to select the bank number
-.macro set_vic_bank bank_no
-    lda cia.pra
-    and ~cia.pra.vic2.mask
-    ora ~bank_no & cia.pra.vic2.mask
-    sta
+.macro set_vic_bank, bank_no
+    lda cia2.pra
+    and ~cia2.pra.vic2.mask
+    ora ~bank_no & cia2.pra.vic2.mask
+    sta cia2.pra
 .end

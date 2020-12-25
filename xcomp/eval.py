@@ -3,12 +3,24 @@
 # Published under the BSD license.  See LICENSE For details.
 
 import logging
+from typing import *
+from attr import attrs
+from attr import Factory
 from functools import singledispatchmethod
 from .model import *
 from .compiler_base import CompilerBase
 from .cpu6502 import AddressMode
 
 log = logging.getLogger(__name__)
+
+# TODO: provide recursive context for eval failures
+
+
+@attrs(auto_attribs=True)
+class FixupExpr(object):
+    pos: Pos
+    scope_stack: List
+    expr: Expr
 
 
 class Evaluator(CompilerBase):
@@ -41,6 +53,9 @@ class Evaluator(CompilerBase):
                     f'Identifier "{realname}" is already defined in scope')
         self.scope[realname] = item
 
+    def get_fixup(self, expr):
+        return FixupExpr(expr.pos, self.scope_stack.copy(), expr)
+
     @singledispatchmethod
     def _eval(self, expr):
         raise Exception('cannot eval expression of type {type(expr)}')
@@ -48,6 +63,15 @@ class Evaluator(CompilerBase):
     @_eval.register
     def _eval_int(self, expr: int):
         return expr
+
+    @_eval.register
+    def _eval_fixup(self, fixup: FixupExpr):
+        try:
+            old_stack = self.scope_stack
+            self.scope_stack = fixup.scope_stack
+            return self.eval(fixup.expr)
+        finally:
+            self.scope_stack = old_stack
 
     @_eval.register
     def _eval_name(self, expr: ExprName):
