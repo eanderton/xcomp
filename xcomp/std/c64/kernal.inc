@@ -1,8 +1,12 @@
+; Copyright (c) 2020, Eric Anderton
+; All rights reserved.
+; Published under the BSD license.  See LICENSE For details.
 ;
 ; Defines for the C64 Kernal
 ;
 
-.struct kernal
+.struct kernal $E000
+    .var __code__ $2000
     .def acptr   $FFA5 ; Input byte from serial port
     .def chkin   $FFC6 ; Open channel for input
     .def chkout  $FFC9 ; Open a channel for output

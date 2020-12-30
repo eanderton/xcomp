@@ -1,3 +1,6 @@
+; Copyright (c) 2020, Eric Anderton
+; All rights reserved.
+; Published under the BSD license.  See LICENSE For details.
 ;
 ; Constants used for C64 BASIC v2.0
 ; https://www.c64-wiki.com/wiki/BASIC_token

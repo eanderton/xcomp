@@ -1,3 +1,6 @@
+; Copyright (c) 2020, Eric Anderton
+; All rights reserved.
+; Published under the BSD license.  See LICENSE For details.
 ;
 ; Support for the C64 CIA1 and CIA2 chips
 ; https://www.c64-wiki.com/wiki/CIA
