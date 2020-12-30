@@ -1,3 +1,6 @@
+; Copyright (c) 2020, Eric Anderton
+; All rights reserved.
+; Published under the BSD license.  See LICENSE For details.
 ; Macro definitions for frequently used inline code
 
 .macro set_mem16, m16, c16

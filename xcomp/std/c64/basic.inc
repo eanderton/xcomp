@@ -21,7 +21,10 @@ next_line:
 .end
 
 ; Useful constants for BASIC programs
-.struct basic
+.struct basic $A000
+    .var __data__ $2000
+
+    ; commonly used constants for compiled BASIC data in memory
     .def eol $00
     .def end_program $0000  ; two bytes
 

@@ -1,3 +1,6 @@
+; Copyright (c) 2020, Eric Anderton
+; All rights reserved.
+; Published under the BSD license.  See LICENSE For details.
 ;
 ; mul8 - 8x8 bit multiplier
 ;

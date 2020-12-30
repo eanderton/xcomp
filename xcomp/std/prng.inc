@@ -1,6 +1,8 @@
-; prng
-;
+; Published to the public domain on the NESDev Wiki:
+; https://wiki.nesdev.com/w/index.php/Nesdev_wiki:General_disclaimer
 ; https://wiki.nesdev.com/w/index.php/Random_number_generator
+;
+; Pseudorandom number generator basedona linear feedback shift register.
 ;
 ; Returns a random 8-bit number in A (0-255), clobbers Y (0).
 ;
