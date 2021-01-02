@@ -30,8 +30,9 @@ setuptools.setup(
     packages=['xcomp'],
     test_suite='tests',
     install_requires=[
-        'ansicolor',
+        'ansicolors',
         'cbmcodecs',
+        'parsimonious',
     ],
     extras_require={
        'develop': [
@@ -40,8 +41,14 @@ setuptools.setup(
            'pytest-cov'
         ],
     },
-    cmdclass= {
+    cmdclass={
        'develop': ExtDevelop,
+    },
+    package_data={
+        'xcomp': [
+            'std/*.inc',
+            'std/c64/*.inc',
+        ],
     },
     entry_points={
         'console_scripts': [
